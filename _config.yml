@@ -12,11 +12,11 @@ plugins:
   - jekyll-remote-theme
   - jekyll-seo-tag
 
-color_scheme: light 
-layout: wider 
+# color_scheme: light 
+# layout: wider 
 
 # Enable the toggle switch
-dark_mode: true
+# dark_mode: true
 aux_links:
   "GitHub Repository":
     - "https://github.com/keshvadi/security"
