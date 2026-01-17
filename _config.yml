@@ -1,32 +1,20 @@
 title: Computer Network Security
 description: Computer Network Security webbook
-theme: just-the-docs
 
-url: https://keshvadi.github.io/security/
+# Use remote_theme for GitHub Pages
+remote_theme: just-the-docs/just-the-docs
 
+# Correct URL settings for GitHub Pages
+url: "https://keshvadi.github.io"
+baseurl: "/security"
+
+# Theme settings
+color_scheme: dark # Or 'light' / 'wider'
 aux_links:
-  Computer Network Security: https://keshvadi.github.io/security/
+  "GitHub Repository":
+    - "https://github.com/keshvadi/security"
 
-baseurl: "" # the subpath of your site, e.g. /blog
-url: "" # the base hostname & protocol for your site, e.g. http://example.com
-
-# Build settings
-remote_theme: pmarsceill/just-the-docs
-color_scheme: wider
-aux_links:
-  "Computer Network Security":
-    - "https://keshvadi.github.io/security"
-  "Dark Mode":
-    - "#"
-
-# Exclude from processing.
-# The following items will not be processed, by default.
-# Any item listed under the `exclude:` key here will be automatically added to
-# the internal "default list".
-#
-# Excluded items can be processed by explicitly listing the directories or
-# their entries' file path in the `include:` list.
-#
+# Exclude from processing
 exclude:
   - Gemfile
   - Gemfile.lock
