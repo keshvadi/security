@@ -12,9 +12,8 @@ plugins:
   - jekyll-remote-theme
   - jekyll-seo-tag
 
-# Theme settings
-# Set the default theme
 color_scheme: light 
+layout: wider 
 
 # Enable the toggle switch
 dark_mode: true
