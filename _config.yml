@@ -8,8 +8,16 @@ remote_theme: just-the-docs/just-the-docs
 url: "https://keshvadi.github.io"
 baseurl: "/security"
 
+plugins:
+  - jekyll-remote-theme
+  - jekyll-seo-tag
+
 # Theme settings
-color_scheme: dark # Or 'light' / 'wider'
+# Set the default theme
+color_scheme: light 
+
+# Enable the toggle switch
+dark_mode: true
 aux_links:
   "GitHub Repository":
     - "https://github.com/keshvadi/security"
