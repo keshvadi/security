@@ -1,6 +1,6 @@
 ---
 title: Cryptography
-nav_order: 3
+nav_order: 2
 has_children: true
 layout: default
 header-includes:
@@ -9,6 +9,8 @@ header-includes:
 
 # Cryptography
 
-In this unit, we'll be studying _cryptography_, techniques for securing information and communication in the presence of an attacker. In particular, we will see how we can prevent adversaries from reading or altering our private data. In a nutshell, cryptography is about communicating securely over insecure communication channels.
+In our earlier discussion of the foundations of security, we introduced the core goals of confidentiality, integrity, and availability (the CIA triad). The next question is practical: how can we protect data and communication when they must traverse networks we do not control and cannot fully trust?
 
-The ideas we'll examine have significant grounding in mathematics, and in general constitute the most systematic and formal set of approaches to security that we'll cover.
+One of the key mechanisms is *cryptography* (literally secret writing), an engineering discipline that enables secure communication over an insecure channel (like the Internet) by turning security goals into concrete, enforceable mechanisms. In doing so, cryptography helps defend against realistic threats such as eavesdropping, tampering, and impersonation.
+
+In this unit, you will learn how cryptographic tools support essential security services (e.g., confidentiality, integrity, and authentication), how keys and algorithms work together, and how real-world constraints such as performance, usability, and randomness shape security outcomes in practice.

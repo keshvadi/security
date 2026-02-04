@@ -1,5 +1,5 @@
 ---
-title:  Introduction to Cryptography
+title: Introduction to Cryptography
 parent: Cryptography
 nav_order: 1
 layout: page
@@ -7,105 +7,124 @@ header-includes:
   - \pagenumbering{gobble}
 ---
 
-#  Introduction to Cryptography
+# Introduction to Cryptography
 
-## 1. Disclaimer: Don't roll your crypto! <make sure that the sentense is correct>
+## 1. Brief History of Cryptography
 
-In this book, we will learn the basic building blocks of cryptography, and in particular, just enough to get a feeling for how they work at a conceptual level. Understanding cryptography at a conceptual level will give you good intuition for how industrial systems use cryptography in practice.
+The word "cryptography" comes from the Latin roots _crypt_, meaning secret, and _graphia_, meaning writing. So cryptography is quite literally the study of how to write secret messages. Today, the field is the study of techniques used to secure communication by transforming readable information into an unreadable format for unauthorized parties.
 
-However, cryptography in practice is very tricky to get right. Actual real-world cryptographic implementations require great attention to detail and have hundreds of possible pitfalls. For example, private information might leak out through various side-channels, random number generators might go wrong, and cryptographic primitives might lose all security if you use them the wrong way. explaining all of those details and pitfalls is out of the scope of this book. that said, you should never implement your own cryptography using the algorithms you learn in this book as there is an importatnt lesson in security community: never roll your crypto.
+### From Classical Ciphers to the Telegraph Era
 
-Instead, the cryptography we show you in this book is as much about educating you as a consumer as educating you as an engineer. If you find yourself needing an encrypted connection between two computers, or if you need to send an encrypted message to another person, you should use existing well-vetted cryptographic tools. However, you will often be faced with the problem of understanding how something is supposed to work. You might also be asked to evaluate the difference between alternatives. For that, you will need to understand the underlying cryptographic engineering involved. Similarly, there are sometimes applications that take advantage of cryptographic primitives in non-cryptographic ways, so it is useful to know the primitives. You never know when you might need a hash, an HMAC, or a block cipher for a non-security task that takes advantage of their randomness properties.
+Techniques for secret communication are ancient. A well-known early example is the *Caesar cipher*, attributed to Julius Caesar, which encrypts text by shifting each letter by a fixed number of positions in the alphabet. For instance, with a shift of 3, the message *“NETWORK”* becomes *“QHWZRUN”*. While simple by modern standards, such substitution ciphers capture a timeless goal: making intercepted messages unintelligible to outsiders.
 
-In summary, know that we're going to teach you just enough cryptography to be dangerous, but not enough to implement industrial-strength cryptography in practice.
+Cryptography took on new urgency in the *19th century* with the rise of *electronic long-distance communication*, especially the telegraph. Military and diplomatic organizations needed ways to protect sensitive messages traveling over infrastructure that could be monitored. Because messages often had to be encrypted and decrypted *by hand*, many “pen-and-ink” systems remained relatively simple—practical for human operators, but also more vulnerable to well-resourced codebreakers and pattern-based attacks.
 
-## 2. Brief History of Cryptography
+### The Mechanical Era and the Enigma Story
 
-The word "cryptography" comes from the Latin roots _crypt_, meaning secret, and _graphia_, meaning writing. So cryptography is quite literally the study of how to write secret messages.
+The next major shift came with the *mechanical era*, when engineers began building machines to automate encryption. The most famous example is the German *Enigma* machine used during World War II. Enigma was an impressive engineering system that greatly increased complexity and operational speed, making it practical to encrypt large volumes of military traffic.
 
-Schemes for sending secret messages go back to antiquity. 2,000 years ago, Julius Caesar employed what's today referred to as the "Caesar cypher," which consists of permuting the alphabet by shifting each letter forward by a fixed amount. For example, if Caesar used a shift by $$3$$ then the message "cryptography" would be encoded as "fubswrjudskb". With the development of the telegraph (electronic communication) during the 1800s, the need for encryption in military and diplomatic communications became particularly important. The codes used during this "pen and ink" period were relatively simple since messages had to be decoded by hand. The codes were also not very secure, by modern standards.
+First, earlier breakthroughs by Polish cryptanalysts (who had already made headway against earlier Enigma procedures) and the subsequent transfer of knowledge and materials (including access to Enigma-related components and replicas) provided a valuable foundation for the later British effort. Second, the work drew on deep mathematical and analytical expertise, including contributions by figures such as *Alan Turing*. Turing’s work on the *Bombe* (an electromechanical system used to help determine Enigma settings) helped narrow the space of possible configurations and made the search for the correct key feasible in practice. His contributions also helped shape ideas that influenced modern computing, and he is widely regarded as one of the founding fathers of computer science. Third, Bletchley Park scaled the operation to an industrial level: at its height, the British codebreaking effort grew to more than 10,000 personnel and coordinated workflows that combined human expertise with mechanized assistance, enabling many searches to run in parallel, the processing of enormous volumes of intercepted traffic, and the exploitation of weaknesses introduced by real-world procedures and repeated patterns.
 
-The second phase of cryptography, the "mechanical era," was the result of a German project to create a mechanical device for encrypting messages in an unbreakable code. The resulting _Enigma_ machine was a remarkable feat of engineering. Even more remarkable was the massive British effort during World War II to break the code. The British success in breaking the Enigma code helped influence the course of the war, shortening it by about a year, according to most experts. There were three important factors in the breaking of the Enigma code. First, the British managed to obtain a replica of a working Enigma machine from Poland, which had cracked a simpler version of the code. Second, the Allies drew upon a great deal of brainpower, first with the Poles, who employed a large contingent of mathematicians to crack the structure, and then from the British, whose project included Alan Turing, one of the founding fathers of computer science. The third factor was the sheer scale of the code-breaking effort. The Germans figured that the Enigma was well-nigh uncrackable, but what they didn't figure on was the unprecedented level of commitment the British poured into breaking it, once codebreakers made enough initial progress to show the potential for success. At its peak, the British codebreaking organization employed over 10,000 people, a level of effort that vastly exceeded anything the Germans had anticipated. They also developed electromechanical systems that could, in parallel, search an incredible number of possible keys until the right one was found.
+A central lesson from this era is that cryptographic strength is not only about the cipher design. It also depends on how systems are used, what attackers can learn, and how much effort they are willing (and able) to invest.
 
-Modern cryptography is distinguished by its reliance on mathematics and electronic computers. It has its early roots in the work of Claude Shannon following World War II. The analysis of the _one-time pad_ (discussed in the next chapter) is due to Shannon. The early 1970s saw the introduction of a standardized cryptosystem, DES, by the National Institute for Standards in Technology (NIST). DES answered the growing need for digital encryption standards in banking and other businesses. The decade starting in the late 1970s then saw an explosion of work on a computational theory of cryptography.
+### Modern Cryptography: Mathematics, Computers, and Security Theory
+What we now call *modern cryptography* is distinguished by its strong reliance on mathematical foundations and computer-based implementation. After World War II, *Claude Shannon* played a foundational role by formalizing ideas about secrecy and information, including analysis related to the *one-time pad* (a scheme notable for achieving perfect secrecy under the right assumptions which we will cover in this unit).
 
-## 3. Definitions
+As computing became central to business and government, the need for standardized, interoperable encryption grew. In the early 1970s, the U.S. standards community (NIST) introduced the *Data Encryption Standard (DES)* to meet practical needs in areas like banking and commercial data protection. From the late 1970s onward, cryptography rapidly developed into a rigorous field with formal definitions, security models, and proofs—laying the groundwork for the cryptographic systems that secure today’s networks, applications, and digital infrastructure.
 
-Intuitively, we can see that the Caesar cypher is not secure (try all 26 possible shifts and you'll get the original message back), but how can we prove that it is, in fact, insecure? To formally study cryptography, we will have to define a mathematically rigorous framework that lets us analyze the security of various cryptographic schemes.
 
-The rest of this section defines some important terms that will appear throughout the unit.
+## 2. Definitions
 
-## 4. Definitions: Alice, Bob, Eve, and Mallory
+At a glance, it is easy to see why the Caesar cipher is weak: there are only 26 possible shifts, so an attacker can simply try them all until the message becomes readable. But *how do we argue this rigorously*—and more generally, how do we reason about whether a cryptographic scheme is secure?
 
-The most basic problem in cryptography is one of ensuring the security of communications across an insecure medium. Two recurring members of the cast of characters in cryptography are _Alice_ and _Bob_, who wish to communicate securely as though they were in the same room or were provided with a dedicated, untappable line. However, they only have available a telephone line or an Internet connection subject to tapping by an eavesdropping adversary, _Eve_. In some settings, Eve may be replaced by an active adversary _Mallory_, who can tamper with communications in addition to eavesdropping on them.
+To study cryptography formally, we introduce a precise framework: we define the participants, define what an attacker is allowed to do, and define what it means for the attacker to “succeed.” The rest of this section introduces core terms that we will use throughout the unit.
 
-The goal is to design a scheme for scrambling the messages between Alice and Bob in such a way that Eve has no clue about the contents of their exchange, and Mallory is unable to tamper with the contents of their exchange without being detected. In other words, we wish to simulate the ideal communication channel using only the available insecure channel.
+## Definitions: Alice, Bob, Eve, and Mallory
 
-##  Definitions: Keys
+The most basic problem in cryptography is securing communication over an *insecure channel*. We typically describe this using a standard cast of characters. *Alice* and *Bob* are the parties who want to communicate securely, as if they were in the same room or connected by a private, untappable link. In real systems, Alice and Bob are not necessarily people. For example, Alice could be a web browser or mobile app, and Bob could be a web server or API.
 
-The most basic building block of any cryptographic system (or _cryptosystem_) is the _key_. The key is a secret value that helps us secure messages. Many cryptographic algorithms and functions require a key as input to lock or unlock some secret value.
+Unfortunately, Alice and Bob must communicate over a channel such as a telephone line or the Internet that an adversary may be able to access. A passive attacker is traditionally called *Eve*, the *eavesdropper*, who can listen to or record traffic but does not modify it (for example, someone within the same Wi‑Fi range capturing wireless packets). In other settings, we consider an active attacker called *Mallory*, who can do everything Eve can *and also* tamper with communication (e.g., modify, inject, replay, or block messages). For instance, Mallory might be an entity positioned “on the path”, such as a compromised router, a malicious access point, or an operator with privileged access to networking infrastructure (e.g., an ISP-level device). In this sense, Mallory is a *superset* of Eve: an active attacker includes all passive capabilities plus additional control over the communication channel.
 
-There are two main key models in modern cryptography. In the _symmetric key_ model, Alice and Bob both know the value of a secret key, and must secure their communications using this shared secret value. In the _asymmetric key_ model, each person has a secret key and a corresponding _public key_.
+The goal of cryptographic design is to “scramble” communication so that:
+- Eve learns nothing useful about the message contents, and
+- Mallory cannot alter the communication without the change being detected.
 
-## 6. Definitions: Confidentiality, Integrity, Authenticity
+In other words, we aim to simulate an ideal communication channel using only the insecure channel that is actually available.
 
-As we mentioned, CIA traid is the goals of computer secuirty. In cryptography, there are still the three main security properties that we want to achieve.
+## Definitions: Keys
 
-_Confidentiality_ is the property that prevents adversaries from reading our private data. If a message is confidential, then an attacker does not know its contents. You can think about confidentiality like locking and unlocking a message in a lockbox. Alice uses a key to lock the message in a box and then sends the message (in the locked box) over the insecure channel to Bob. Eve can see the locked box, but cannot access the message inside since she does not have a key to open the box. When Bob receives the box, he is able to unlock it using the key and retrieve the message.
+A central building block of nearly every cryptographic system (a *cryptosystem*) is the *key*. A key is a value that controls a cryptographic algorithm, enabling it to provide security services such as confidentiality and authentication. In practice, many cryptographic algorithms are designed to be public, and the *key* is what must remain secret.
 
-Most cryptographic algorithms that guarantee confidentiality work as follows: Alice uses a key to _encrypt_ a message by changing it into a scrambled form that the attacker cannot read. She then sends this encrypted message over the insecure channel to Bob. When Bob receives the encrypted message, he uses the key to _decrypt_ the message by changing it back into its original form. We call the message _plaintext_ when it is unencrypted and _ciphertext_ when it is encrypted. Even if the attacker can see the encrypted ciphertext, they should not be able to decrypt it back into the corresponding plaintext--only the intended recipient, Bob, should be able to decrypt the message.
+There are two main key models in modern cryptography. In the _symmetric-key_ model, Alice and Bob share a single secret key and use that shared secret to protect communication. In the _asymmetric-key_ (public-key) model, each party has a *key pair* consisting of a *private key* (kept secret) and a *public key* (shared openly). Public keys enable secure communication and verification without requiring Alice and Bob to share a secret in advance.
 
-_Integrity_ is the property that prevents adversaries from tampering with our private data. If a message has integrity, then an attacker cannot change its contents without being detected.
+We will explore both models in depth in the upcoming topics.
 
-_Authenticity_ is the property that lets us determine who created a given message. If a message has authenticity, then we can be sure that the message was written by the person who claims to have written it.
+## Definitions: Kerckhoff's Principle
 
-You might be thinking that authenticity and integrity seem very closely related, and you would be correct; it makes sense that before you can prove that a message came from a particular person, you first have to prove that the message was not changed. In other words, before you can prove authenticity, you first have to be able to prove integrity. However, these are not identical properties and we will take a look at some edge cases as we delve further into the cryptographic unit.
+To analyze security, we must be explicit about the *threat model*: what can attackers like Eve and Mallory see and do, and what information do they have?
+A foundational assumption in modern cryptography is *Kerckhoffs’s Principle*, which can be summarized as follows:
 
-You can think about cryptographic algorithms that ensure integrity and authenticity as adding a seal on the message that is being sent. Alice uses the key to add a special seal, like a piece of tape on the envelope, on the message. She then sends the sealed message over the unsecure channel. If Mallory tampers with the message, she will break the tape on the envelope, and therefore break the seal. Without the key, Mallory cannot create her own seal. When Bob receives the message, he checks that the seal is untampered before unsealing the envelope and revealing the message.
+> A cryptosystem should remain secure even if attackers know how it works.  
+> The system should depend on the secrecy of the key, not the secrecy of the algorithm, and it should be possible to recover from leaks by rotating keys rather than redesigning the entire system.  
+> This idea is closely related to the maxim “don’t rely on security through obscurity”.
 
-Most cryptographic algorithms that guarantee integrity and authenticity work as follows: Alice generates a _tag_ or a _signature_ on a message. She sends the message with the tag to Bob. When Bob receives the message and the tag, he verifies that the tag is valid for the message that was sent. If the attacker modifies the message, the tag should no longer be valid, and Bob's verification will fail. This will let Bob detect if the message has been altered and is no longer the original message from Alice. The attacker should not be able to generate valid tags for their malicious messages.
+Accordingly, throughout this unit we will assume that adversaries may know the encryption and decryption algorithms and may understand how the system is implemented.[^1] The only information the attacker is missing is the secret key(s).
 
-A related property that we may want our cryptosystem to have is _deniability_. If Alice and Bob communicate securely, Alice might want to publish a message from Bob and show it to a judge, claiming that it came from Bob. If the cryptosystem has deniability, there is no cryptographic proof available to guarantee that Alice's published message came from Bob. For example, consider a case where Alice and Bob use the same key to generate a signature on a message, and Alice publishes a message with a valid signature. Then the judge cannot be sure that the message came from Bob--the signature could have plausibly been created by Alice.
+## 3. Confidentiality, Integrity, Authenticity
 
-<!-- <i am thinking to move this overview section to the end as summary of the unit> -->
-## 7: Overview of schemes
+In the previous unit, you learned the *CIA triad*: confidentiality, integrity, and availability. In this cryptography unit, we focus on how cryptographic tools help achieve *confidentiality* and *integrity*, and how they support *authentication* (which is closely tied to integrity). Availability is an essential security goal, but it is usually addressed through system design and operational defenses rather than cryptographic mechanisms alone.
 
-We will look at cryptographic primitives that provide confidentiality, integrity, and authentication in both the symmetric-key and asymmetric-key settings.
+At a high level, cryptography provides these security services using a small set of *cryptographic primitives* (basic building blocks). You will learn the details of these primitives in the next topics. For now, we introduce the goals they are designed to achieve.
 
-|                              | Symmetric-key                                     | Asymmetric-key                                        |
-| ---------------------------- | ------------------------------------------------- | ----------------------------------------------------- |
-| Confidentiality              | Block ciphers with chaining modes (e.g., AES-CBC) | Public-key encryption(e.g., El Gamal, RSA encryption) |
-| Integrity and authentication | MACs (e.g., AES-CBC-MAC)                          | Digital signatures (e.g., RSA signatures)             |
+### Confidentiality
 
-In symmetric-key encryption, Alice uses her secret key to encrypt a message, and Bob uses the same secret key to decrypt the message.
+As mentioned before, *Confidentiality* means an adversary should not be able to learn the contents of private data. For messages, confidentiality aims to ensure that an attacker who observes traffic still cannot understand what was sent.
+A useful mental model is a *lockbox*. Alice places her message inside a locked box and sends it over an insecure channel. Eve can see (and even copy) the box, but without the right key she cannot open it. Bob, who has the key, can unlock the box and read the message.
 
-In public-key encryption, Bob generates a matching public key and private key, and shares the public key with Alice (but does not share his private key with anyone). Alice can encrypt her message under Bob's public key, and then Bob will be able to decrypt using his private key. If these schemes are secure, then no one except Alice and Bob should be able to learn anything about the message Alice is sending.
+In modern systems, the “lockbox” is *encryption*. The original message is called *plaintext*. After encryption, it becomes *ciphertext*, which should look meaningless to an attacker. Bob uses *decryption* to turn ciphertext back into the original plaintext.
+Even if Eve captures the ciphertext, she should not be able to recover the plaintext without the appropriate key.
 
-In the symmetric-key setting, _message authentication codes (MACs)_ provide integrity and authenticity. Alice uses the shared secret key to generate a MAC on her message, and Bob uses the same secret key to verify the MAC. If the MAC is valid, then Bob can be confident that no attacker modified the message, and the message actually came from Alice.
+### Integrity
+*Integrity* means an adversary should not be able to change data without being detected. If a message has integrity, then modifications (whether accidental or malicious) can be identified by the receiver.
+Integrity is especially important against an active attacker like Mallory, who may attempt to modify messages in transit or inject new ones.
 
-In the asymmetric-key setting, _public-key signatures_ (also known as digital signatures) provide integrity and authenticity. Alice generates a matching public key and private key, and shares the public key with Bob (but does not share her private key with anyone). Alice computes a digital signature of her message using her private key, and appends the signature to her message. When Bob receives the message and its signature, he will be able to use Alice's public key to verify that no one has tampered with or modified the message, and that the message actually came from Alice.
+### Authenticity (Authentication)
+*Authenticity* means the receiver can determine *who* created a message. If a message is authentic, Bob can be confident that it was produced by the claimed sender (e.g., Alice), rather than by an attacker.
+Authenticity and integrity are closely related: it is hard to believe a message “came from Alice” unless you also have a way to detect whether it was altered. In that sense, integrity is often a prerequisite for authenticity. However, the two are not identical, and we will see later where the distinction matters.
 
-We will also look at several other cryptographic primitives. These primitives don't guarantee confidentiality, integrity, or authenticity by themselves, but they have desirable properties that will help us build secure cryptosystems. These primitives also have some useful applications unrelated to cryptography.
+A helpful analogy for authenticaion is a *tamper-evident seal* on an envelope. Alice attaches a special seal to her message before sending it. If Mallory tampers with the message, the seal breaks. Without the right key (or the right private key, in public-key systems), Mallory cannot create a seal that will pass verification.
+In cryptographic terms, Alice attaches a value that the receiver can check. In some schemes, Alice computes a short *tag* or computes a *digital signature* that Bob can verify.
+If the message is modified, verification should fail, allowing Bob to detect tampering. An attacker should not be able to generate valid tags or signatures for forged messages.
 
-- _Cryptographic hashes_ provide a one way digest: They enable someone to condense a long message into a short sequence of what appear to be random bits. Cryptographic hashes are irreversible, so you can't go from the resulting hash back to the original message but you can quickly verify that a message has a given hash.
+> **Note:** In the upcoming topics, you will learn the specific primitives that provide these services (e.g., encryption for confidentiality, and integrity/authentication mechanisms such as MACs and digital signatures), and how real protocols combine them.
 
-- Many cryptographic systems and problems need a lot of random bits. To generate these we use a _pseudo random number generator_, a process which takes a small amount of true randomness and stretches it into a long sequence that should be indistinguishable from actual random data.
+### Non-Repudiation vs. Deniability
 
-- _Key exchange_ schemes (e.g. Diffie-Hellman key exchange) allow Alice and Bob to use an insecure communication channel to agree on a shared random secret key that is subsequently used for symmetric-key encryption.
+In addition to confidentiality and integrity, we often consider a property known as *non-repudiation*. This is a security service that ensures a sender cannot later deny having sent a message. In the _asymmetric-key_ model, because only Alice possesses her private key, a digital signature provides a "mathematical thumbprint" that proves to a third party that the message must have originated from her.
 
-## 8. Definitions: Kerckhoff's Principle
+A related, opposing property is *deniability* (or "plausible deniability"). Informally, deniability means that even if Alice provides a transcript of a conversation, there is no definitive cryptographic proof that Bob authored a particular message.
 
-Let's now examine the threat model, which in this setting involves answering the question: How powerful are the attackers Eve and Mallory?
+This often occurs in the _symmetric-key_ setting. Since Alice and Bob share the exact same secret key to generate authentication codes, Alice is technically capable of forging a message that looks exactly like one Bob would send. In that case, a third party (such as a judge) cannot be certain the message originated from Bob, because Alice could have created it as well. In this context, while the message has integrity (we know it wasn't changed by Mallory), it lacks non-repudiation because Bob can plausibly deny involvement.
 
-To consider this question, recall _Kerckhoff's principle_ from the earlier notes about security principles:
+## 4: Overview of Cryptographic Schemes
 
-> Cryptosystems should remain secure even when the attacker knows all internal details of the system. The key should be the only thing that must be kept secret, and the system should be designed to make it easy to change keys that are leaked (or suspected to be leaked). If your secrets are leaked, it is usually a lot easier to change the key than to replace every instance of the running software. (This principle is closely related to _Shannon's Maxim: Don't rely on security through obscurity._)
+**Note**: At this stage, the goal is not to learn specific primitives or algorithms. Instead, this section gives you a roadmap of which primitives are typically used for which purpose. You will see the details and real protocol examples in the next topics.
 
-Consistent with Kerckhoff's principle, we will assume that the attacker knows the encryption and decryption algorithms.[^1] The only information the attacker is missing is the secret key(s).
+In this unit, we will study cryptographic primitives, the basic building blocks that help us achieve three core security services in communication: confidentiality, integrity, and authentication. 
+We will revisit these ideas in two settings:
+- **Symmetric-key cryptography**, where Alice and Bob share the same secret key. Alice encrypts a message using the shared secret key, and Bob decrypts using the same key (Confidentiality). In addition, Alice can compute an authentication tag using the shared secret key, and Bob verifies it using the same key. If verification succeeds, Bob gains confidence that the message was not modified in transit and that it came from someone who knows the shared secret (Integrity & authentication).
 
-## 9. Definitions: Threat models
+- **Asymmetric-key (public-key) cryptography**, where a participant has a public/private key pair. In a public-key system, each participant has a *matched key pair*: a *public key* and a *private key*. These keys are constructed so that an operation performed with one key can be correctly “undone” or *checked* only with the *other* key (depending on the primitive). Bob generates a *public key* and a *private key*. He publishes the public key and keeps the private key secret. Alice encrypts to Bob using Bob’s public key, and only Bob can decrypt using his private key (Confidentiality).
+In addition, Alice can sign a message using her *private key*, and anyone (including Bob) can verify the signature using Alice’s *public key*. If verification succeeds, Bob gains confidence that the message was not altered and that it was signed by the holder of Alice’s private key (Integrity & authentication (digital signatures)).
 
-When analyzing the confidentiality of an encryption scheme, there are several possibilities about how much access an eavesdropping attacker Eve has to the insecure channel:
+Importantly, public-key encryption and digital signatures are different schemes with different security goals. So you should not think of “encrypting with the private key” as a way to achieve confidentiality, since anyone who has your public key could reverse the operation and recover the message.
+
+Symmetric-key techniques are typically efficient and are widely used for protecting large volumes of data, while public-key techniques make it possible to establish security and identity without first sharing a secret in advance. Real systems often combine both approaches.
+
+## 5. Definitions: Threat models
+
+When we claim that an encryption scheme is “secure”, we must be explicit about the *threat model*, meaning what Eve can observe and what interactions Eve is allowed to have with the system. Different levels of attacker access lead to different kinds of attacks and different security guarantees. 
+Below are common threat models used when analyzing *confidentiality*. They are listed roughly from weaker to stronger attacker capabilities.
 
 1. Eve has managed to intercept a single encrypted message and wishes to recover the plaintext (the original message). This is known as a _ciphertext-only attack_.
 
@@ -115,13 +134,21 @@ When analyzing the confidentiality of an encryption scheme, there are several po
 
 4. Eve can trick Alice to encrypt arbitrary messages of Eve's choice, for which Eve can then observe the resulting ciphertexts. (This might happen if Eve has access to the encryption system, or can generate external events that will lead Alice to sending predictable messages in response.) At some other point in time, Alice encrypts a message that is unknown to Eve; Eve intercepts the encryption of Alice's message and aims to recover the message given what Eve has observed about previous encryptions. This case is known as a _chosen-plaintext attack_.
 
- Eve can trick Bob into decrypting some ciphertexts. Eve would like to use this to learn the decryption of some other ciphertext (different from the ciphertexts Eve tricked Bob into decrypting). This case is known as a _chosen-ciphertext attack_.
+5. Eve can trick Bob into decrypting some ciphertexts. Eve would like to use this to learn the decryption of some other ciphertext (different from the ciphertexts Eve tricked Bob into decrypting). This case is known as a _chosen-ciphertext attack_.
 
 6. A combination of the previous two cases: Eve can trick Alice into encrypting some messages of Eve's choosing, and can trick Bob into decrypting some ciphertexts of Eve's choosing. Eve would like to learn the decryption of some other ciphertext that was sent by Alice. (To avoid making this case trivial, Eve is not allowed to trick Bob into decrypting the ciphertext sent by Alice.) This case is known as a _chosen-plaintext/ciphertext attack_, and is the most serious threat model.
 
-Today, we usually insist that our encryption algorithms provide security against chosen-plaintext/ciphertext attacks, both because those attacks are practical in some settings, and because it is in fact feasible to provide good security even against this very powerful attack model.
+In practice, modern systems aim for very strong security (often including resistance to chosen-ciphertext attacks). In this course, we use chosen-plaintext security (CPA) as our baseline model for confidentiality because it is the simplest rigorous starting point. Later topics on integrity and authenticated encryption explain how real-world designs achieve stronger protections, and we will reference stronger models when they are relevant.
 
-<!-- <i am not sure if i want to say this. i need to see an evidance that we actually don't cover the chosen-plaintext/ciphertext attack> -->
-<!-- However, for simplicity, this unit will focus primarily on security against chosen-plaintext attacks. -->
+## 6. Disclaimer: Don’t Roll Your Own Crypto!
+
+A famous rule in security engineering is: **don’t roll your own crypto**. In this unit, you will learn the core ideas and building blocks of cryptography enough to understand what the tools are designed to do, how they fit together, and why modern systems can (and sometimes cannot) achieve security.
+That said, cryptography is notoriously easy to get wrong in practice. Real implementations must handle many details that are outside the scope of an introductory unit, including secure randomness, key generation and storage, parameter choices, error handling, side-channel leakage, safe composition of primitives, and interoperability. A design that looks correct on paper can fail due to a subtle implementation bug, an unexpected interaction between components, or a flawed operational assumption. For these reasons, you should *not implement your own cryptographic algorithms* based solely on what you learn here.
+
+Instead, you should be able to understand what a tool is *supposed* to provide (confidentiality, integrity, authentication), what assumptions it relies on, and how to compare alternatives at a high level. As an scientist/engineer working in secure environments, you should learn when to rely on established, well-vetted cryptographic libraries and protocols, how to read security documentation critically, and how to recognize red flags such as “custom crypto”, hidden algorithms, or vague security claims.
+
+Cryptographic primitives also appear outside traditional security use cases (for example, producing fingerprints of data or generating values that look random). Even then, the safe approach is the same: *use standard, widely reviewed tools* and treat “rolling your own” cryptography as a serious risk.
+
+In short, this unit will teach you enough cryptography to understand and assess modern systems, but not enough to responsibly build industrial-strength cryptography from scratch. That is by design.
 
 [^1]: The story of the Enigma gives one possible justification for this assumption: given how widely the Enigma was used, it was inevitable that sooner or later the Allies would get their hands on an Enigma machine, and indeed they did.
