@@ -1,5 +1,5 @@
 ---
-title: 26. ARP
+title: ARP
 parent: Network Security
 nav_order: 2
 layout: page
@@ -7,9 +7,9 @@ header-includes:
   - \pagenumbering{gobble}
 ---
 
-# 26. Wired Local Networks: ARP
+# Wired Local Networks: ARP
 
-## 26.1. Cheat sheet
+## Cheat sheet
 
 - Layer: Link (2)
 
@@ -33,7 +33,7 @@ removed: where the bytes of the MAC come from -peyrin
 
 {% endcomment %}
 
-## 26.2. Networking background: Ethernet
+## Networking background: Ethernet
 
 Recall that on a LAN (local-area network), all machines are connected to all other machines. Ethernet is one particular LAN implementation that uses wires to connect all machines.
 
@@ -41,7 +41,7 @@ Ethernet started as a broadcast-only network. Each node on the network could see
 
 For versions of Ethernet that are inherently broadcast, such as a hub, an adversary in the local network can see all network traffic and can also introduce any traffic they desire by simply sending packets with a spoofed MAC address. Sanity check: what type of adversary does this make someone on the same LAN network as a victim?[^1]
 
-## 26.3. Protocol: ARP
+## Protocol: ARP
 
 **ARP**, the **Address Resolution Protocol**, translates Layer 3 IP addresses into Layer 2 MAC addresses.
 
@@ -57,13 +57,13 @@ If Bob is outside of the LAN, then the router would respond in step 2 with its M
 
 Any received ARP replies are always cached, even if no broadcast request (step 1) was ever made.
 
-## 26.4. Attack: ARP Spoofing
+## Attack: ARP Spoofing
 
 Because there is no way to verify that the reply in step 2 is actually from Bob, it is easy to attack this protocol. If Mallory is able to create a spoofed reply and send it to Alice before Bob can send his legitimate reply, then she can convince Alice that a different MAC address (such as Mallory's) corresponds to Bob's IP address. Now, when Alice wants to send a local message to Bob, she will use the malicious cached IP address to MAC address mapping, which might map Bob's IP address to Mallory's MAC address. This will cause messages intended for Bob to be sent to Mallory. Sanity check: what type of adversary is Mallory after she executes an ARP spoof attack?[^2]
 
 ARP spoofing is our first example of a race condition, where the attacker's response must arrive faster than the legitimate response to fool the victim. This is a common pattern for on-path attackers, who cannot block the legitimate response and thus must race to send their response first.
 
-## 26.5. Defenses: Switches
+## Defenses: Switches
 
 A simple defense against ARP spoofing is to use a tool like arpwatch, which tracks the IP address to MAC address pairings across the LAN and makes sure nothing suspicious happens.
 

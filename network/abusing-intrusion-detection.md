@@ -1,8 +1,9 @@
 ---
 title: Abusing Intrusion Detection
-parent: 
+parent: Network Security
 nav_order: 13
 layout: page
+nav_exclude: true
 header-includes:
   - \pagenumbering{gobble}
 ---
