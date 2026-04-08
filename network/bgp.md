@@ -1,5 +1,5 @@
 ---
-title: 29. BGP
+title: BGP
 parent: Network Security
 nav_order: 5
 layout: page
@@ -7,9 +7,9 @@ header-includes:
   - \pagenumbering{gobble}
 ---
 
-# 29. IP Routing: BGP
+# IP Routing: BGP
 
-## 29.1. Cheat sheet
+## Cheat sheet
 
 - Layer: 3 (inter-network)
 
@@ -19,7 +19,7 @@ header-includes:
 
 - Defense: Accept as a fact of life and rely on higher layers
 
-## 29.2. Networking background: Subnets
+## Networking background: Subnets
 
 Recall that IP addresses uniquely identify a single machine on the global network. (With NAT, the address could correspond to multiple machines, but this can be abstracted away when discussing IP.) When sending packets to a remote IP on a different local network, the packet must make many hops across many local networks before finally reaching its destination.
 
@@ -35,25 +35,20 @@ Past the gateway, the packet passes onto the general Internet, which is composed
 
 When an AS receives a packet, it first checks if that packet's final destination is located within the AS. If the final destination is within the AS, it routes the packet directly to the final destination. Otherwise, it must forward the packet to another AS that is closer to the final destination.
 
-## 29.3. Protocol: BGP
+## Protocol: BGP
 
-Routing between ASs on the Internet is determined by BGP (the Border Gateway Protocol). BGP operates by having each AS advertise which networks it is responsible for to its neighboring ASs. Then each neighbor advertises that they can process packets to that network and provides information about the AS path that the packets would follow. The process continues until the entire Internet is connected into a graph with many paths between ASs. If an AS has a choice between two advertisements, it will generally select the shortest path. Actual BGP path selection is a fair bit more complicated than described here, but is out of scope for this class (take CS 168 to learn more).
+Routing between ASs on the Internet is determined by BGP (the Border Gateway Protocol). BGP operates by having each AS advertise which networks it is responsible for to its neighboring ASs. Then each neighbor advertises that they can process packets to that network and provides information about the AS path that the packets would follow. The process continues until the entire Internet is connected into a graph with many paths between ASs. If an AS has a choice between two advertisements, it will generally select the shortest path. Actual BGP path selection is a fair bit more complicated than described here, but is out of scope for this class (take Computer Networking to learn more).
 
-## 29.4. Attack: Malicious ASs
+## Attack: Malicious ASs
 
 The biggest problem with BGP is that it operates on trust, assuming that all ASs are effectively honest. Thus an AS can lie and say that it is responsible for a network it isn't, resulting in all traffic being redirected to the lying AS. There are further enhancements that allow a lying AS to act as a full man-in-the-middle, routing all traffic for a destination through the rogue AS.
 
 Recall that IP operates on "best effort". Packets are delivered whole, but can be delivered in any order and may be corrupted or not sent at all. IPv4 and lower layers usually include checksums or CRC checks designed to detect corrupted packets. Sanity check: Why do the checksums not prevent a malicious AS from modifying packets?[^2]
 
-## 29.5. Defenses
+## Defenses
 
 In practice, there's not much anyone can do to defend against a malicious AS, since each AS operates relatively independently. Instead, we rely on protocols such as TCP at higher layers to guarantee that messages are sent. TCP will resend packets that are lost or corrupted because of malicious ASs. Also, cryptographic protocols at higher layers such as TLS can defend against malicious attackers, by guaranteeing confidentiality (attacker can't read the packets) and integrity (attacker can't modify the packets without detection) on packets. Both TCP and TLS are covered in later sections.
 
-## Sample Exam Questions
-
-Here we've compiled a list of Sample Exam Questions that cover BGP.
-
-- [Spring 2023 Final Question 8: Life of a Packet](https://assets.cs161.org/exams/sp23/sp23final.pdf#page=15)
-
+### Footnotes
 [^1]: $$2^8$$. The prefix is 24 bits, so there are 32 - 24 = 8 bits not in the prefix.
 [^2]: Checksums are not cryptographic. The malicious AS could modify the packet and create a new checksum for the modified packet.

@@ -1,13 +1,13 @@
 ---
-title: 37. Abusing Intrusion Detection
-parent: Network Security
+title: Abusing Intrusion Detection
+parent: 
 nav_order: 13
 layout: page
 header-includes:
   - \pagenumbering{gobble}
 ---
 
-# 37. Abusing Intrusion Detection
+# Abusing Intrusion Detection
 
 On a high level, network intrusion detection can be thought of as wiretapping on a bulk scale. The NSA utilizes various “off-the-shelf” concepts including using various Network Intrusion Detection Systems and Databases, malicious code, and hadoop.
 
