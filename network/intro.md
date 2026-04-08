@@ -7,6 +7,44 @@ header-includes:
   - \pagenumbering{gobble}
 ---
 
+# Introduction to Networking
+
+To secure a network, we must first understand how it is built. This section provides an overview of the "layers" of the Internet and how they work together to move data across the globe.
+
+---
+
+## Introduction: The Security Mindset in Networking
+
+In the previous unit, we looked at Cryptography, the math used to lock and unlock secrets. However, cryptography doesn't exist in a vacuum. To use it, we have to send those encrypted bits across physical wires, through airwaves, and across thousands of miles of cables owned by people we might not trust.
+
+Networking is the study of how we move that data. In this unit, we will discover that the Internet was originally designed for functionality, not security. Many of the protocols we use today were built on a foundation of "implicit trust", which creates the vulnerabilities we will spend this unit learning to defend.
+
+---
+
+## The Goal of the Internet
+
+The primary goal of the Internet is simple: to move data from Point A to Point B. To understand how a global network is formed, we can look at it as a series of building blocks, moving from local connections to global ones.
+
+### The Building Blocks: LANs
+The first step is moving bits across physical space, whether that is electricity on a copper wire, light in a fiber-optic cable, or radio waves in the air. Using these physical connections, we can link a group of nearby machines together into a **Local Area Network (LAN)**.
+
+In a LAN, every machine is capable of talking to every other machine on that same local segment.
+
+> **The Postal Analogy:** Think of a LAN like an **apartment complex**. Everyone in the building is close by. If you want to give a letter to your neighbor in Apartment 3, you can just walk down the hall and slide it under their door. You don't need a map of the city or a delivery truck, you just need to know which door is theirs.
+
+### Connecting the World: Routers and WANs
+It would be impossible to run a direct wire from your computer to every other computer in the world. Instead, we use a specialized machine called a **router** to connect different LANs together.
+
+
+
+A router is a member of two or more networks simultaneously. When a computer wants to send data to a machine on a *different* network, it sends that data to the router. The router then "routes" (forwards) that message toward the destination LAN. 
+
+By linking millions of LANs together using routers, we create a **Wide Area Network (WAN)**, which is the basis of the Internet.
+
+> **The Postal Analogy:** If you want to send a letter to someone in a different city, you can't walk there yourself. You take your letter to the **Post Office** (the Router). The Post Office looks at the address, realizes it’s not for anyone in your apartment complex, and sends it on a truck to another Post Office closer to the destination.
+
+---
+
 #  Introduction to Networking
 
 To discuss network security, first we need to know how the network is designed. This section provides a (simplified) overview of the various Internet layers and how they interact.
