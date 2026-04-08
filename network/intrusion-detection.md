@@ -1,5 +1,5 @@
 ---
-title: 36. Intrusion Detection
+title: Intrusion Detection
 parent: Network Security
 nav_order: 12
 layout: page
@@ -7,17 +7,17 @@ header-includes:
   - \pagenumbering{gobble}
 ---
 
-# 36. Intrusion Detection
+# Intrusion Detection
 
 In this class, we've talked about many ways to prevent attacks, but not all defenses are perfect, and attacks will often slip through our defenses. How do we detect these attacks when they happen?
 
 Imagine that you're managing a local network of computers (for example, all the web servers and employee computers in a company's office building). The local network is connected to the Internet with a router (recall that all requests from the local network to the wider Internet will pass through this router). How can we detect attacks on this network?
 
-## 36.1. Types of detectors
+## Types of detectors
 
 There are three broad types of detectors. The main difference in implementation is where on the network these detectors are installed. Each type of detector has its advantages and drawbacks.
 
-## 36.2. Types of detectors: Network Intrusion Detection System (NIDS)
+## Types of detectors: Network Intrusion Detection System (NIDS)
 
 A NIDS (network intrusion detection system) is installed between the router and the internal network. This means that all requests to and from the outside Internet must pass through the NIDS. The NIDS can see (and potentially modify) all packets sent to the outside Internet and received from the outside Internet.
 
@@ -33,7 +33,7 @@ The possibility of inconsistent interpretations of messages between the NIDS and
 
 Another major issue with NIDS is the need to deal with encrypted traffic. Most modern web traffic is encrypted with HTTPS (TLS), which is end-to-end secure. In other words, the NIDS has no way to determine the contents of the messages being sent. To allow NIDS to analyze encrypted traffic, the network may need to be configured so that the end hosts give the NIDS their private keys to allow the NIDS to decrypt TLS connections. This might not always be a desirable solution, since it compromises the security of private keys and the security guarantees of NIDS, and it may allow network analysts to see sensitive information that only the end hosts should see.
 
-## 36.3. Types of detectors: Host-based Intrusion Detection System (HIDS)
+## Types of detectors: Host-based Intrusion Detection System (HIDS)
 
 A HIDS (host-based intrusion detection system) is installed directly on the end hosts. For example, antivirus software might be considered a HIDS, because it is installed on the same computer that is generating and receiving network requests.
 
@@ -43,7 +43,7 @@ However, these advantages don't come for free. Unlike NIDS, where a single imple
 
 HIDS also don't defend against all evasion attacks. For example, a web server might expect a filename input from the user and serve the matching file to the user. If the user inputs `evanbot.txt`, the server might check the `/public/files` directory and return the `/public/files/evanbot.txt` file to the user. An attacker could supply a malicious input like `../../etc/passwd`. In Unix, `..` says to go up one directory, so this input would allow the attacker to access the passwords file, even though it's located in a different directory on the server. This type of attack is called a _path traversal attack_. To fully defend against path traversal attacks, it is not enough for the the HIDS to understand the contents of the end request. The HIDS would also need to reason about how the underlying filesystem interprets the contents of the end request. This can lead to further parsing inconsistencies and evasion attacks.
 
-## 36.4. Types of detectors: Logging
+## Types of detectors: Logging
 
 A third approach to intrusion detection is logging. Most modern web servers generate logs with information such as what web requests have been made, what files have been accessed, and what applications have been run. We can analyze these logs for evidence of malicious behavior or attacks.
 
@@ -53,7 +53,7 @@ The biggest drawback to logging is that it cannot be done in real-time. By the t
 
 In terms of cost, logging is usually cheap, because web servers already have built-in logging mechanisms. The only overhead is occasionally running an external script on those logs to search for evidence of attacks.
 
-## 36.5. False Positives and False Negatives
+## False Positives and False Negatives
 
 There are two ways a detector can go wrong. A _false negative_ occurs when an attack happens but the detector incorrectly reports that there is no attack. A _false positive_ occurs when there is no attack, but the detector incorrectly reports that there is an attack. As an example, consider a fire alarm system. A false negative occurs if there is a fire but the fire alarm does not go off. A false positive occurs if there is no fire, but the fire alarm goes off.
 
@@ -63,11 +63,11 @@ Suppose you have two detectors. Detector A has a false positive rate of 0.1% and
 
 The quality of your detector also depends on the rate of attacks. Consider Detector A again. If we receive 1,000 requests a day and 5 of them are attacks, then the expected number of false positives is 0.1% $$\times$$ 995 $$\approx$$ 1 request per day. (995 requests are not attacks, and out of the non-attacks, 0.1% of them will incorrectly be reported as an attack.) However, now suppose we receive 10,000,000 (10 million) requests a day and 5 of them are attacks. Now the expected number of false positives is 0.1% $$\times$$ 9,999,995 $$\approx$$ 10,000 requests per day. Note that nothing has changed about the detector. The only thing that changed was the number of requests received per day (and thus the rate of attacks). However, in the second scenario, our detector is much less useful, because we have to handle 10,000 false positives every day. This example shows that accurate detection is very challenging when the rate of attacks is extremely low, because even a very good detector will flag so many false positives that it becomes impractical to manually review every single false positive. For more information on this phenomenon, read about the [base rate fallacy](https://en.wikipedia.org/wiki/Base_rate_fallacy).
 
-## 36.6. Detection strategies
+## Detection strategies
 
 So far, we've talked about how detectors are installed and how to measure their effectiveness, but we haven't talked about how the detector actually analyzes network traffic to detect an attack. There are four main strategies for detecting an attack, each with their benefits and drawbacks.
 
-## 36.7. Detection strategies: Signature-based detection
+## Detection strategies: Signature-based detection
 
 **The idea**: Look for activity that matches the structure of a known attack.
 
@@ -87,7 +87,7 @@ Cons:
 
 - It might not catch variants of known attacks if the variant is different enough that the signature no longer matches. If the signature detector is too simple, it's easy to modify the attack slightly to circumvent the detector.
 
-## 36.8. Detection strategies: Anomaly-based detection
+## Detection strategies: Anomaly-based detection
 
 **The idea**: Develop a model of what normal activity looks like. Flag any activity that deviates from normal activity.
 
@@ -107,7 +107,7 @@ Cons:
 
 In general, anomaly-based behavior is mostly studied in academic papers but not widely deployed as a detection strategy.
 
-## 36.9. Detection strategies: Specification-based detection
+## Detection strategies: Specification-based detection
 
 **The idea**: Manually specify what normal activity looks like. Flag any activity that deviates from normal activity.
 
@@ -125,7 +125,7 @@ Cons:
 
 - It's very time-consuming to manually write specifications for every application.
 
-## 36.10: Detection strategies: Behavioral detection
+## Detection strategies: Behavioral detection
 
 **The idea**: Look for evidence of compromise.
 

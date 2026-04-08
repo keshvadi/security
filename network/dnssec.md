@@ -3,6 +3,7 @@ title: 33. DNSSEC
 parent: Network Security
 nav_order: 9
 layout: page
+nav_exclude: true
 header-includes:
   - \pagenumbering{gobble}
 ---

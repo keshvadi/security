@@ -49,6 +49,5 @@ Recall that IP operates on "best effort". Packets are delivered whole, but can b
 
 In practice, there's not much anyone can do to defend against a malicious AS, since each AS operates relatively independently. Instead, we rely on protocols such as TCP at higher layers to guarantee that messages are sent. TCP will resend packets that are lost or corrupted because of malicious ASs. Also, cryptographic protocols at higher layers such as TLS can defend against malicious attackers, by guaranteeing confidentiality (attacker can't read the packets) and integrity (attacker can't modify the packets without detection) on packets. Both TCP and TLS are covered in later sections.
 
-### Footnotes
 [^1]: $$2^8$$. The prefix is 24 bits, so there are 32 - 24 = 8 bits not in the prefix.
 [^2]: Checksums are not cryptographic. The malicious AS could modify the packet and create a new checksum for the modified packet.

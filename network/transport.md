@@ -1,5 +1,5 @@
 ---
-title: 30. TCP and UDP
+title: TCP and UDP
 parent: Network Security
 nav_order: 6
 layout: page
@@ -7,9 +7,9 @@ header-includes:
   - \pagenumbering{gobble}
 ---
 
-# 30. Transport Layer: TCP, UDP
+# Transport Layer: TCP, UDP
 
-## 30.1. Cheat sheet
+## 1. Cheat sheet
 
 - Layer: 4 (transport)
 
@@ -19,7 +19,7 @@ header-includes:
 
 - Defense: Rely on cryptography at a higher layer (TLS). Use randomly generated sequence numbers to stop off-path attackers.
 
-## 30.2. Networking background: Ports
+## 2. Networking background: Ports
 
 Recall that IP, the layer 3 (inter-network) protocol, is a best-effort protocol, meaning that packets can be corrupted, reordered, or dropped entirely. Also, IP addresses uniquely identify machines, but do not support multiple processes on one machine using the network (e.g. multiple browser tabs, multiple applications).
 
@@ -29,7 +29,7 @@ On client machines, such as your laptop, port numbers can be arbitrarily assigne
 
 The transport layer has 2 main protocols to choose from: TCP guarantees reliable, in-order packet delivery, while UDP does not. Both protocols use port numbers to support communication between processes. The choice of protocol depends on the context of the application.
 
-## 30.3. Protocol: UDP
+## 3. Protocol: UDP
 
 **UDP (user datagram protocol)** is a best-effort transport layer protocol. With UDP, applications send and receive discrete packets, and packets are not guaranteed to arrive, just like in IP. It is possible for datagrams to be larger than the underlying network's packet size, but this can sometimes introduce problems.
 
@@ -37,7 +37,7 @@ The UDP header contains 16-bit source and destination port numbers to support co
 
 <img src="{{ site.baseurl }}/assets/images/network/transport/UDP_header.png" alt="UDP header" width="60%">
 
-## 30.4. Protocol: TCP
+## 4. Protocol: TCP
 
 **TCP (Transmission Control Protocol)** is a reliable, in-order, connection-based stream protocol. In TCP, a client first establishes a connection to the server by performing a handshake. Once established, the connection is reliable and in order: TCP handles resending dropped packets until they are received on the other side and rearranging any packets received out of order. TCP also handles breaking up long messages into individual packets, which lets programmers think in terms of high-level, arbitrary-length bytestream connections and abstract away low-level, fixed-size packets.
 
@@ -79,13 +79,13 @@ To end a connection, one side sends a FIN (a packet with the FIN flag set), and 
 
 Connections can also be unilaterally aborted. If one side sends a RST packet with a proper sequence number, this tells the other side that "I won't send any more data on this connection and I won't accept any more data on this connection." Unlike FIN packets, RST packets are not acknowledged. A RST usually indicates something went wrong, such as a program crashing or abruptly terminating a connection.
 
-## 30.5. Tradeoffs between TCP and UDP
+## 5. Tradeoffs between TCP and UDP
 
 TCP is slower than UDP, because it requires a 3-way handshake at the start of each connection, and it will wait indefinitely for dropped packets to be sent again. However, TCP provides better correctness guarantees than UDP.
 
 UDP is generally used when speed is a concern. For example, DNS requires extremely short response times, so it uses UDP instead of TCP at the transport layer. Video games and voice applications often use UDP because it is better to just miss a request than to stall everything waiting for a retransmission.
 
-## 30.6. Attack: TCP Packet Injection
+## 6. Attack: TCP Packet Injection
 
 The main attack in TCP is **packet injection**. The attacker spoofs a malicious packet, filling in the header so that the packet looks like it came from someone in the TCP connection.
 
@@ -99,16 +99,8 @@ Recall that that there are three types of network attackers. Each one has differ
 
 **In-path Adversary:** The in-path (man-in-the-middle) adversary has all the powers of the on-path adversary and can additionally modify and block messages sent by either party. As a result, the same attack as the on-path adversary outlined above applies, and in addition, the in-path adversary doesn't have to race the party they are spoofing. A man in the middle can just block the message from ever arriving to the other party and send their own.
 
-## 30.7. Defenses: TLS, random initial sequence numbers
+## 7. Defenses: TLS, random initial sequence numbers
 
 The main problem here is that TCP by itself provides no confidentiality or integrity guarantees. To prevent injections like these, we rely on TLS, which is a higher-layer protocol that secures TCP communication with cryptography.
 
 One important defense against off-path attackers is using random, unpredictable initial sequence numbers. This forces the off-path attacker to guess the correct sequence number with very low probability.
-
-## Sample Exam Questions
-
-Here we've compiled a list of Sample Exam Questions that cover the Transport Layer.
-
-- [Spring 2023 Final Question 8: Life of a Packet](https://assets.cs161.org/exams/sp23/sp23final.pdf#page=15)
-
-[^1]: The sequence number is 32 bits, so guessing a random sequence number succeeds with probability $$1/2^{32}$$.

@@ -1,5 +1,5 @@
 ---
-title: 31. TLS
+title: TLS
 parent: Network Security
 nav_order: 7
 layout: page
@@ -7,7 +7,7 @@ header-includes:
   - \pagenumbering{gobble}
 ---
 
-# 31. TLS
+# TLS
 
 **TLS** (**Transport Layer Security**) is a protocol that provides an end-to-end encrypted communication channel. (You may sometimes see **SSL**, which is the old, deprecated version of TLS.) **End-to-end encryption** guarantees that even if any one part of the communication chain is compromised (for example, if the packet passes through a malicious AS), no one except the sender and receiver is able to read or modify the data being sent.
 
@@ -15,7 +15,7 @@ The original OSI 7-layer model did not consider security, so TLS is usually refe
 
 TLS relies on TCP to guarantee that messages are delivered reliably in the proper order. From the application viewpoint, TLS is effectively just like a TCP connection with additional security guarantees.
 
-## 31.1. TLS Handshake
+## TLS Handshake
 
 <img src="{{ site.baseurl }}/assets/images/network/tls/tls1.png" alt="Diagram of the first part of the TLS handshake, from the ClientHello to the server certificate presentation" width="75%">
 
@@ -73,7 +73,7 @@ At the end of a proper TLS handshake, we have several security guarantees. (Sani
 
 Once the handshake is complete, messages are encrypted and MAC'd with the encryption and integrity keys of the sender before being sent. Because these messages have full confidentiality and integrity, TLS has achieved end-to-end security between the client and the server.
 
-## 31.2. Replay attacks
+## Replay attacks
 
 Recall that a **replay attack** involves an attacker recording old messages and sending them to the server. Even though the attacker doesn't know what these messages decrypt to, if the protocol doesn't properly defend against replay attacks, the server might accept these messages as valid and allow the attacker to spoof a connection.
 
@@ -81,7 +81,7 @@ The public values $$R_B$$ and $$R_S$$ at the start of the handshake defend again
 
 What about a replay attack within the same connection? In practice, messages sent over TLS usually include some counter or timestamp so that an attacker cannot record a TLS message and send it again within the same connection.
 
-## 31.3. TLS in practice
+## TLS in practice
 
 The biggest advantage and problem of TLS is the certificate authorities. "Trust does not scale", that is, you personally can't make trust decisions about everyone, but trust can be delegated, which is how TLS operates. We have delegated to a large number of companies, the **Certificate Authorities**, the responsibility of proving that a particular public key can speak for a particular site. This is what allows the system to work at all. But at the same time, unless additional measures are taken, this means that all CAs need to be trusted to speak for every site. This is why Chrome, for example, has a "pinned\" CA list, so only some CAs are allowed to speak for certain websites.
 
@@ -90,14 +90,6 @@ Similarly, newer CAs implement **certificate transparency**, a mechanism where a
 These days TLS is effectively free. The computational overhead is minor to the point of trivial: an ECDSA signature and ECDHE key exchange for the server, and such signatures and key exchanges are computationally minor: a single modern processor core can do tens of thousands of signatures or key exchanges per second. And once the key exchange is completed the bulk encryption is nearly free as most processors include routines specifically designed to accelerate AES.
 
 This leaves the biggest cost of TLS in managing the private keys. Previously CAs charged a substantial amount to issue a certificate, but [LetsEncrypt](https://letsencrypt.org/) costs nothing because they have fully automated the process. You run a small program on your web server that generates keys, sends the public key to LetsEncrypt, and LetsEncrypt instructs that you put a particular file in a particular location on your server, acting to prove that you control the server. So LetsEncrypt has reduced the cost in two ways: It makes the TLS certificate monetarily free and, as important, makes it very easy to generate and use.
-
-## Sample Exam Questions
-
-Here we've compiled a list of Sample Exam Questions that cover TLS.
-
-- [Spring 2024 Final Question 9: Key Rotation](https://assets.cs161.org/exams/sp24/sp24final.pdf#page=19)
-- [Fall 2023 Final Question 11: New Phone Who This](https://assets.cs161.org/exams/fa23/fa23final.pdf#page=20)
-- [Spring 2023 Final Question 9: TLS Times Two](https://assets.cs161.org/exams/sp23/sp23final.pdf#page=17)
 
 [^1]: A: No. An attacker can obtain the genuine server's certificate by starting its own TLS connection with the genuine server, and then present a copy of that certificate in step 2.
 [^2]: A: It was signed by a certificate authority in the previous step.

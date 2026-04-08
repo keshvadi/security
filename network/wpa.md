@@ -3,6 +3,7 @@ title: 28. WPA
 parent: Network Security
 nav_order: 4
 layout: page
+nav_exclude: true
 header-includes:
   - \pagenumbering{gobble}
 ---
