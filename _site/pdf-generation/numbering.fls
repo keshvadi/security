@@ -33,3 +33,5 @@ INPUT numbering.aux
 OUTPUT numbering.aux
 OUTPUT numbering.pdf
 INPUT /var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map
+INPUT numbering.aux
+INPUT /usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr12.pfb
