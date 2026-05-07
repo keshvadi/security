@@ -434,4 +434,8 @@ These three threat models appear again and again in Unit 2:
 - Topic 6 (Denial-of-Service) can be launched from any of the three models.
 - Topic 4 (TLS) is specifically designed to protect against **in-path** (man-in-the-middle) attackers.
 
+<<<<<<< HEAD
 Understanding these adversary models is the foundation for everything that follows. The Internet’s original design gives every one of these attackers far more power than you might expect which is exactly why we need the cryptographic and defensive techniques you will learn in the rest of this unit and in later units.
+=======
+Understanding these adversary models is the foundation for everything that follows. The Internet’s original design gives every one of these attackers far more power than you might expect which is exactly why we need the cryptographic and defensive techniques you will learn in the rest of this unit and in later units.
+>>>>>>> 08db53bcfb4ea441ff7434dbd6bdd6a105d1c513
