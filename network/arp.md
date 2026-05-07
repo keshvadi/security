@@ -1,75 +1,120 @@
 ---
-title: ARP
+title: ARP Spoofing
 parent: Network Security
-nav_order: 2
+nav_order: 1
 layout: page
 header-includes:
   - \pagenumbering{gobble}
 ---
 
-# Wired Local Networks: ARP
+# Wired Local Networks: ARP Spoofing
 
 ## Cheat sheet
 
-- Layer: Link (2)
+- **Layer**: Link (2)
+- **Purpose**: Translate IP addresses into MAC addresses on a local network
+- **Vulnerability**: On-path attackers can see ARP requests and send spoofed replies faster than the legitimate response (race condition)
+- **Result**: Attacker becomes a man-in-the-middle and can read, modify, or inject traffic
+- **Defenses**: Switches (instead of hubs), port security, arpwatch, VLANs, static ARP entries, and higher-layer encryption (TLS)
 
-- Purpose: Translate IP addresses to MAC addresses
+---
 
-- Vulnerability: On-path attackers can see requests and send spoofed malicious responses
+## 1. Networking Background: Ethernet, MAC Addresses, and Broadcast Networks
 
-- Defense: Switches, arpwatch
+Before we can understand ARP attacks, we need to revisit a few concepts from Topic 1 with a security lens.
 
-{% comment %}
+On a **local area network (LAN)**, computers are connected so they can communicate directly with each other. The most common wired technology for LANs is **Ethernet**. In Ethernet, every device has a unique **MAC address** (a 6-byte identifier usually written as six pairs of hex digits, e.g., `ca:fe:f0:0d:be:ef`).
 
-## Networking background: LANs, Ethernet
+**Critical security fact**: MAC addresses are **self-reported**. Every Ethernet frame contains the sender’s MAC address in the header, but the network has no way to verify that the claimed MAC address is correct. A device can simply lie. This is why you should **never** use MAC addresses for authentication or access control.
 
-Computers in a small area (an office or a university campus, for example) connected through the link layer form a **local area network** (LAN).
+Early Ethernet networks used **hubs**, simple devices that broadcast every frame to *everyone* on the LAN. Even modern Wi-Fi networks behave like this by default. Any device on the network can put its network card into **promiscuous mode** and receive *every* frame, not just the ones addressed to it. This is called **packet sniffing**.
 
-removed: error detection codes -peyrin
+**Sanity check**: If you are on the same LAN as a victim (for example, the same coffee-shop Wi-Fi or university dorm network), what kind of adversary are you?  
+**Answer**: You are an **on-path adversary**. you can see all traffic and you can send any traffic you want with a spoofed MAC address.
 
-The most common link layer is **Ethernet**, which assigns a 6-byte **MAC address** (Media Access Controller address) to each computer on the LAN. This is not to be confused with MACs (message authentication codes) from the crypto section. Usually it is clear from context which type of MAC we are referring to, although sometimes MACs are renamed as MICs (message integrity codes) when discussing networking. MAC addresses are usually written as 6 pairs of hex numbers, such as `ca:fe:f0:0d:be:ef`. There is also a special MAC address, the broadcast address of `ff:ff:ff:ff:ff:ff`, that says "send this frame to everyone on the local network\".
+This broadcast nature of local networks is exactly why ARP is so easy to attack.
 
-removed: where the bytes of the MAC come from -peyrin
+## 2. The ARP Protocol
 
-{% endcomment %}
+**ARP** (Address Resolution Protocol) solves a simple but essential problem: given an IP address, what is the corresponding MAC address?
 
-## Networking background: Ethernet
+When Alice wants to send a packet to Bob on the same LAN and she only knows Bob’s IP address (`10.0.0.12`), she uses ARP:
 
-Recall that on a LAN (local-area network), all machines are connected to all other machines. Ethernet is one particular LAN implementation that uses wires to connect all machines.
+1. Alice **broadcasts** to everyone on the LAN:  
+   “Who has IP address 10.0.0.12? Tell ca:fe:f0:0d:be:ef (my MAC).”
 
-Ethernet started as a broadcast-only network. Each node on the network could see messages sent by all other nodes, either by being on a common wire or a network **hub**, a simple repeater that took every packet it received and rebroadcast it to all the outputs. A receiver is simply supposed to ignore all packets not sent to either the receiver's MAC or the broadcast address. But this is only enforced in software, and most Ethernet devices can enter **promiscuous mode**, where it will receive all packets. This is also called **sniffing packets**.
+2. Bob (the owner of 10.0.0.12) replies **directly to Alice**:  
+   “10.0.0.12 is at ca:fe:f0:0d:be:ef.”
 
-For versions of Ethernet that are inherently broadcast, such as a hub, an adversary in the local network can see all network traffic and can also introduce any traffic they desire by simply sending packets with a spoofed MAC address. Sanity check: what type of adversary does this make someone on the same LAN network as a victim?[^1]
+3. Alice **caches** this mapping (IP → MAC) so she doesn’t have to ask again for a while.
 
-## Protocol: ARP
+If Bob is outside the LAN, the router replies instead with *its own* MAC address.
 
-**ARP**, the **Address Resolution Protocol**, translates Layer 3 IP addresses into Layer 2 MAC addresses.
+**Important detail**: ARP is completely trust-based. Any ARP reply is accepted and cached, even if it was never requested. There is no authentication, no encryption, and no way to verify the sender.
 
-Say Alice wants to send a message to Bob, and Alice knows that Bob's IP address is `1.1.1.1`. The ARP protocol would follow three steps:
+## 3. The Attack: ARP Spoofing (Race Condition)
 
-1.  Alice would broadcast to everyone else on the LAN: "What is the MAC address of `1.1.1.1`?\"
+Because ARP trusts every reply, an attacker can easily poison the cache.
 
-2.  Bob responds by sending a message only to Alice: "My IP is `1.1.1.1` and my MAC address is `ca:fe:f0:0d:be:ef`.\" Everyone else does nothing.
+**Attack scenario**:
+- Alice wants to talk to Bob (IP 10.0.0.12).
+- Mallory (the attacker) is on the same LAN and can see the ARP request.
+- Mallory immediately sends a **spoofed ARP reply** claiming:  
+  “10.0.0.12 is at my MAC address (de:ad:be:ef:00:01).”
 
-3.  Alice caches the IP address to MAC address mapping for Bob.
+If Mallory’s spoofed reply arrives **before** Bob’s legitimate reply, Alice updates her ARP cache with the malicious mapping. 
+Even if Bob’s legitimate reply arrives later, most systems will **overwrite** the existing cache entry with Bob’s updated MAC address (ARP is stateless and updates on any new reply). However, because Alice now has a cached entry, she will **not** send another ARP request right away. To maintain the attack, Mallory must keep sending spoofed ARP replies (often called *gratuitous ARPs*) at regular intervals to re-poison Alice’s cache. From that moment on, every packet Alice sends to Bob is actually delivered to Mallory’s MAC address.
 
-If Bob is outside of the LAN, then the router would respond in step 2 with its MAC address.
+Mallory is now a **man-in-the-middle**. She can:
+- Read all traffic between Alice and Bob
+- Modify packets before forwarding them
+- Inject new packets
+- Drop packets (denial of service)
 
-Any received ARP replies are always cached, even if no broadcast request (step 1) was ever made.
+**This is a classic race condition**. The attacker wins simply by being faster. On-path attackers cannot block the legitimate reply, so they must race to reply first. This pattern appears again in DHCP attacks (next section).
 
-## Attack: ARP Spoofing
+**Sanity check**: After a successful ARP spoofing attack, what type of adversary has Mallory become?  
+**Answer**: A full **in-path (man-in-the-middle)** adversary.
 
-Because there is no way to verify that the reply in step 2 is actually from Bob, it is easy to attack this protocol. If Mallory is able to create a spoofed reply and send it to Alice before Bob can send his legitimate reply, then she can convince Alice that a different MAC address (such as Mallory's) corresponds to Bob's IP address. Now, when Alice wants to send a local message to Bob, she will use the malicious cached IP address to MAC address mapping, which might map Bob's IP address to Mallory's MAC address. This will cause messages intended for Bob to be sent to Mallory. Sanity check: what type of adversary is Mallory after she executes an ARP spoof attack?[^2]
+## 4. Impact and Real-World Consequences
 
-ARP spoofing is our first example of a race condition, where the attacker's response must arrive faster than the legitimate response to fool the victim. This is a common pattern for on-path attackers, who cannot block the legitimate response and thus must race to send their response first.
+Once an attacker is a man-in-the-middle via ARP spoofing, the damage can be severe:
 
-## Defenses: Switches
+- Steal login credentials (HTTP, FTP, Telnet, etc.)
+- Perform session hijacking
+- Inject malware or malicious JavaScript
+- Redirect traffic to phishing sites
+- Capture sensitive files or emails
 
-A simple defense against ARP spoofing is to use a tool like arpwatch, which tracks the IP address to MAC address pairings across the LAN and makes sure nothing suspicious happens.
+ARP spoofing is especially dangerous on open or weakly secured networks (coffee shops, hotels, university networks, conference Wi-Fi) where anyone can join the LAN.
 
-Modern wired Ethernet networks defend against ARP spoofing by using **switches** rather than hubs. Switches have a MAC cache, which keeps track of the IP address to MAC address pairings. If the packet's IP address has a known MAC in the cache, the switch just sends it to the MAC. Otherwise, it broadcasts the packet to everyone. Smarter switches can filter requests so that not every request is broadcast to everyone.
+## 5. Defenses Against ARP Spoofing
 
-Higher-quality switches include **VLAN**s (Virtual Local Area Networks), which implement isolation by breaking the network into separate virtual networks. {% comment %}VLANs also have the ability to configure a mirror port, which sends a copy of all packets transmitted to a specific port for network monitoring.{% endcomment %}
+There is no perfect defense at Layer 2, but several practical mitigations exist:
 
-[^1]: A: On-path
-[^2]: A: Man-in-the-middle. She can receive messages from Alice, modify them, then send them to Bob.
+**Switches instead of hubs**  
+Modern switches learn which MAC address is on which port and only forward frames to the correct port. This dramatically reduces the effectiveness of promiscuous-mode sniffing.
+
+**Port security / MAC address filtering**  
+Many enterprise switches can be configured to allow only one (or a specific) MAC address per port. This makes MAC spoofing much harder.
+
+**Monitoring tools**  
+- `arpwatch` logs all ARP activity and alerts on suspicious changes.
+- Similar tools exist for Windows and macOS.
+
+**VLANs (Virtual LANs)**  
+Higher-end switches can segment the network into separate virtual networks. Even if an attacker joins one VLAN, they cannot easily attack devices on another VLAN.
+
+**Static ARP entries** (for critical systems)  
+On important servers or routers, you can manually configure permanent IP → MAC mappings. This defeats ARP spoofing for those specific devices.
+
+**Higher-layer protections (the ultimate safety net)**  
+Even if an attacker becomes a man-in-the-middle at Layer 2, properly implemented **TLS** (with certificate validation) prevents them from reading or modifying application data. This is why HTTPS, SSH, and VPNs remain effective even on compromised networks.
+
+ARP spoofing is the first concrete example in this unit of how an **on-path attacker** can become a full man-in-the-middle. It perfectly illustrates two recurring themes in network security:
+
+- Many protocols were designed with **no authentication** at the lower layers.
+- **Race conditions** are a powerful attack technique when the attacker cannot block legitimate messages.
+
+In the next section we will see almost the exact same attack pattern used against **DHCP**, another critical protocol that runs when a device first joins a network.
+
