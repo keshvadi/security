@@ -38,7 +38,7 @@ While this model has worked for decades, it has significant limitations:
 
 In 2008, an anonymous person or group using the pseudonym **Satoshi Nakamoto** published a whitepaper titled _Bitcoin: A Peer to Peer Electronic Cash System_. Bitcoin was the first practical solution that aimed to replicate the basic properties of a working currency system without relying on any centralized party. Instead of depending on trusted intermediaries, Bitcoin uses cryptography, a distributed ledger known as the _blockchain_, and a novel consensus mechanism called _Proof of Work_ to achieve these goals.
 
-## 2. Cryptographic Building Blocks
+## Cryptographic Building Blocks
 
 Bitcoin is built on two cryptographic primitives that were introduced earlier in this book: cryptographic hash functions and digital signatures. We briefly review the properties that matter most for Bitcoin.
 
@@ -48,7 +48,7 @@ A digital signature scheme allows a user to prove they authorized a message. Eac
 
 These two primitives let Bitcoin establish ownership and create verifiable, tamper-evident records without relying on any trusted central party. We now use them to construct identities and transactions.
 
-## 3. Identities
+## Identities
 
 In Bitcoin there is no central authority that issues or manages user accounts. Instead, every participant creates their own identity using public-key cryptography.
 
@@ -58,17 +58,17 @@ To prove they control a particular identity, the user signs a message with their
 
 This approach gives users full self-sovereignty over their identities while allowing the network to authenticate actions without any trusted intermediary.
 
-## 4. Transactions
+## Transactions
 
 Without a central party to validate and record transfers, Bitcoin must let users prove cryptographically that they authorize a payment. This is achieved using digital signatures.
 
-Suppose Alice wants to send \( n \) units of currency to Bob. She creates a transaction message that states her intent (for example, “\( PK_A \) sends \( n \) units to \( PK_B \)”) and signs it with her private key \( SK_A \). The signed transaction is then broadcast to the network.
+Suppose Alice wants to send $$n$$ units of currency to Bob. She creates a transaction message that states her intent (for example, “$$PK_A$$ sends $$n$$ units to $$PK_B$$”) and signs it with her private key $$SK_A$$. The signed transaction is then broadcast to the network.
 
-Anyone can verify the signature using Alice’s public key \( PK_A \). A valid signature provides cryptographic proof that the holder of \( SK_A \) authorized the transfer. Because signatures are unforgeable, no one else can create a valid transaction on Alice’s behalf.
+Anyone can verify the signature using Alice’s public key $$PK_A$$. A valid signature provides cryptographic proof that the holder of $$SK_A$$ authorized the transfer. Because signatures are unforgeable, no one else can create a valid transaction on Alice’s behalf.
 
 Note that the Bitcoin protocol itself does not check whether Bob wants to receive the funds. If Bob does not wish to accept the payment, he can simply create another transaction that sends the coins elsewhere.
 
-## 5. Tracking Balances
+## Tracking Balances
 
 So far we have a way for users to prove they authorize a transaction, but nothing yet prevents Alice from signing a transaction that spends more money than she actually owns. We need a mechanism to determine, for any proposed transaction, whether the sender has sufficient funds.
 
@@ -89,7 +89,7 @@ After these transactions, we can calculate everyone’s balance by tracing the f
 
 Now suppose Alice tries to create a new transaction sending 4 BTC to someone else. To validate this transaction, nodes perform three checks:
 
-1. _Signature verification_: The transaction must be correctly signed by Alice’s private key (verifiable with her public key \( PK_A \)).
+1. _Signature verification_: The transaction must be correctly signed by Alice’s private key (verifiable with her public key $$PK_A$$).
 2. _Ownership of funds_: The funds Alice is trying to spend must have been previously sent to her in an earlier transaction (in this case, the 5 BTC from TX₁).
 3. _No double-spending_: Those same funds must not have already been spent in a previous transaction. Here, Alice has only spent 3 BTC so far, so 2 BTC remain unspent.
 
@@ -107,20 +107,20 @@ At this point, we have created a functioning currency:
 
 However, this design still assumes the existence of a single, trusted, append-only ledger that everyone agrees on. Creating such a ledger in a fully decentralized network, where anyone can join and some participants may be malicious, is the remaining major challenge. We address it in the next section.
 
-## 6. Hash Chains
+## Hash Chains
 
 We now have a way to record transactions and validate balances by scanning a public history. However, this only works if we can guarantee that the history itself cannot be altered after it is written. We need a public ledger that is _append-only_ and _immutable_: new entries can be added, but existing entries cannot be changed or deleted without detection.
 
 Bitcoin achieves this using a structure called a **hash chain**.
 
-Suppose we have a sequence of messages \( m_1, m_2, m_3, \ldots \) that we want to record. We organize them into blocks, where each block contains its data plus the cryptographic hash of the previous block:
+Suppose we have a sequence of messages $$m_1, m_2, m_3, \ldots$$ that we want to record. We organize them into blocks, where each block contains its data plus the cryptographic hash of the previous block:
 
 | Block | Contents                                |
 | ----- | --------------------------------------- |
-| 1     | \( \text{Data}\_1 \)                    |
-| 2     | \( \text{Data}\_2, H(\text{Block 1}) \) |
-| 3     | \( \text{Data}\_3, H(\text{Block 2}) \) |
-| 4     | \( \text{Data}\_4, H(\text{Block 3}) \) |
+| 1     | $$\text{Data}_1$$                       |
+| 2     | $$\text{Data}_2, H(\text{Block 1})$$    |
+| 3     | $$\text{Data}_3, H(\text{Block 2})$$    |
+| 4     | $$\text{Data}_4, H(\text{Block 3})$$    |
 
 Because each block includes the hash of the block before it, the blocks become cryptographically linked. We can see this linkage clearly by expanding the hashes:
 
@@ -139,23 +139,23 @@ This structure has a powerful security property: _tamper evidence_. If an attack
 
 The hash chain therefore gives us a way to create a verifiable, append-only history. However, a remaining challenge remains: in a decentralized network, who is allowed to create and add new blocks? We address this next with Proof of Work.
 
-## 7. Properties of Hash Chains
+## Properties of Hash Chains
 
 A key advantage of a hash chain is that it allows anyone to verify the integrity of the entire history while trusting only a small piece of information.
 
-Suppose Alice receives the hash of the most recent block, \( H(\text{Block } i) \), from a trusted source. She can then download all previous blocks from any untrusted source (for example, a compromised server) and still verify that nothing has been altered.
+Suppose Alice receives the hash of the most recent block, $$H(\text{Block } i)$$, from a trusted source. She can then download all previous blocks from any untrusted source (for example, a compromised server) and still verify that nothing has been altered.
 
 She does this by recomputing the hash of each block and checking that it matches the hash stored in the next block, working forward until she reaches the final block. She then compares the computed hash of the last block against the trusted hash she received. If they match, the entire chain is valid.
 
-**Example.** Alice receives \( H(\text{Block 4}) \) from a trusted source and downloads blocks 1 through 4 from an untrusted server. Suppose an attacker tries to give her a modified chain in which Block 2 has been changed to a different block \( 2' \).
+**Example.** Alice receives $$H(\text{Block 4})$$ from a trusted source and downloads blocks 1 through 4 from an untrusted server. Suppose an attacker tries to give her a modified chain in which Block 2 has been changed to a different block $$2'$$.
 
-Because cryptographic hashes are collision-resistant, \( H(\text{Block } 2') \neq H(\text{Block 2}) \). This causes Block 3 (which contains the hash of Block 2) to also be invalid, producing a different Block \( 3' \). The mismatch then propagates to Block 4, resulting in a different Block \( 4' \) whose hash does not match the trusted \( H(\text{Block 4}) \) that Alice received. Alice immediately detects the tampering.
+Because cryptographic hashes are collision-resistant, $$H(\text{Block } 2') \neq H(\text{Block 2})$$. This causes Block 3 (which contains the hash of Block 2) to also be invalid, producing a different Block $$3'$$. The mismatch then propagates to Block 4, resulting in a different Block $$4'$$ whose hash does not match the trusted $$H(\text{Block 4})$$ that Alice received. Alice immediately detects the tampering.
 
 In contrast, if the downloaded chain is unaltered, the final computed hash will match the trusted hash she was given.
 
 Thus, the most important property of a hash chain is this: _if you obtain the hash of the latest block from a trusted source, you can independently verify the correctness of the entire preceding history, even if you downloaded it from completely untrusted sources_.
 
-## 8. Consensus in Bitcoin
+## Consensus in Bitcoin
 
 Because Bitcoin has no central server, every participant (node) independently stores and maintains a full copy of the blockchain. When a user creates a new transaction, they broadcast it to the network. Each node verifies the transaction according to the protocol rules and, if valid, adds it to its local copy of the blockchain.
 
@@ -167,7 +167,7 @@ For example, say that Mallory bought a house from Bob for 500 $$B$$, and this tr
 
 This raises a critical question: in a decentralized network where anyone can propose new blocks and some participants may be dishonest, how do all honest nodes agree on a single, consistent version of the blockchain? Bitcoin solves this problem using a mechanism called **Proof of Work**, which we examine next.
 
-## 9. Consensus via Proof of Work
+## Consensus via Proof of Work
 
 In Bitcoin, any node can validate transactions, but only special nodes called **miners** are allowed to create and append new blocks to the blockchain. To add a block, a miner must solve a computationally difficult puzzle known as **Proof of Work**.
 
@@ -185,7 +185,7 @@ When a miner finds a valid block, they broadcast it to the network. Other nodes 
 
 The key consensus rule is simple: **nodes always accept the valid chain with the most cumulative Proof of Work** (in practice, the longest chain). When temporary forks occur, because two miners happen to find valid blocks at roughly the same time, honest miners will extend whichever chain they see as longest. Over time, the chain that grows faster (supported by the majority of mining power) will become the accepted one, and shorter competing chains are abandoned.
 
-**Example.** Suppose the current chain ends at block \( b_3 \). Miner \( M_1 \) and Miner \( M_2 \) both find valid blocks (\( b_4 \) and \( b_4' \)) at nearly the same time, creating a fork. The next miner to solve a block will extend one of these chains. Whichever chain receives the next block first becomes longer and is more likely to be extended further. Eventually, one chain will pull ahead, and honest nodes will switch to it, discarding the shorter fork.
+**Example.** Suppose the current chain ends at block $$b_3$$. Miner $$M_1$$ and Miner $$M_2$$ both find valid blocks ($$b_4$$ and $$b_4'$$) at nearly the same time, creating a fork. The next miner to solve a block will extend one of these chains. Whichever chain receives the next block first becomes longer and is more likely to be extended further. Eventually, one chain will pull ahead, and honest nodes will switch to it, discarding the shorter fork.
 
 Bitcoin’s security rests on the assumption that the majority of the network’s total computational power (hash rate) is controlled by honest miners. Under this assumption, honest miners will, on average, find blocks faster than any attacker. An attacker who wants to create a longer alternative chain (for example, to reverse a transaction) would need to control more than 50% of the total hash rate, a so-called _51% attack_, which is extremely expensive and difficult to sustain.
 
@@ -193,7 +193,7 @@ This economic reality protects the system: rewriting recent history or sustainin
 
 By combining Proof of Work with the longest-chain rule, Bitcoin achieves decentralized consensus on the order and validity of transactions without relying on any trusted central authority.
 
-## 10. Mining and Economic Incentives
+## Mining and Economic Incentives
 
 In the previous section, we saw how Proof-of-Work and the longest chain rule allow the Bitcoin network to reach consensus. However, for this system to function, someone must actually perform the work of creating new blocks. This role is played by **miners**. Mining is an extremely computationally intensive process that requires specialized hardware on a massive scale.
 

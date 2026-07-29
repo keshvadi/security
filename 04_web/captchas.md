@@ -12,7 +12,7 @@ output:
 
 # CAPTCHAs
 
-## 1. The Purpose of CAPTCHAs
+## The Purpose of CAPTCHAs
 
 Imagine you run a popular website that allows users to create accounts, post comments, or search for content. Without any protection, an attacker could easily write a simple script (a _bot_) to:
 
@@ -34,7 +34,7 @@ From a security perspective, CAPTCHAs serve as an important line of defense in t
 - They protect computationally expensive operations (image processing, complex searches, etc.) from being abused
 - They make large-scale web scraping more difficult and expensive
 
-## 2. Traditional CAPTCHAs (Distorted Text)
+## Traditional CAPTCHAs (Distorted Text)
 
 The earliest and most well-known CAPTCHAs presented users with _distorted text_ that they had to type correctly.
 A typical traditional CAPTCHA would:
@@ -76,7 +76,7 @@ Over time, traditional distorted-text CAPTCHAs became less effective because:
 
 This led to the development of more advanced, modern CAPTCHA systems such as Google reCAPTCHA to address these limitations.
 
-## 3. Modern CAPTCHAs (reCAPTCHA and Others)
+## Modern CAPTCHAs (reCAPTCHA and Others)
 
 As traditional distorted-text CAPTCHAs became less effective, modern CAPTCHAs shifted away from “prove you’re human by solving this puzzle” toward invisible, behavior-based systems that determine humanity by observing user interaction.
 This new approach offers several advantages: it is far less annoying for legitimate users, more difficult for attackers to bypass at scale, and can adapt as attack techniques evolve.
@@ -108,7 +108,7 @@ Several alternatives to reCAPTCHA have gained popularity, as summarized in the t
 | **Arkose Labs**          | Game-like challenges, adaptive difficulty | Very strong against sophisticated bots |
 | **Friendly Captcha**     | Proof-of-work (no images)                 | No visual challenges, good for privacy |
 
-## 4. The Arms Race and Limitations
+## The Arms Race and Limitations
 
 CAPTCHAs exist in a constant _arms race_ between defenders and attackers. As soon as a new type of CAPTCHA becomes popular, attackers develop new ways to bypass it.
 
@@ -129,7 +129,7 @@ The limitations of CAPTCHAs are summarized in the table below:
 | **Declining Effectiveness**  | Advances in AI and computer vision have narrowed or eliminated the gap between challenges that are "easy for humans but hard for machines". Modern bots frequently match or exceed human performance on many CAPTCHA types. |
 | **CAPTCHA Solving Services** | Attackers can bypass CAPTCHAs at scale by using commercial solving services or low-wage CAPTCHA farms.                                                                                                                      |
 
-## 5. Alternatives and Best Practices
+## Alternatives and Best Practices
 
 There is a deep irony at the heart of CAPTCHAs: the better they become at distinguishing humans from machines, the more effectively they help train AI systems to close that very gap. As machine learning and computer vision continue to advance, this irony has become increasingly difficult to ignore. Many security experts now question whether traditional “prove you are human” challenges will remain viable as a primary defense in the long term.
 

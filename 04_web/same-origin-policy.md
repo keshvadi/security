@@ -1,7 +1,7 @@
 ---
 title: Same-Origin Policy
 parent: Web Security
-nav_order: 3
+nav_order: 2
 layout: page
 header-includes:
   - \pagenumbering{gobble}

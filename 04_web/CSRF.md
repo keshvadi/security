@@ -1,7 +1,7 @@
 ---
 title: Cross-Site Request Forgery (CSRF)
 parent: Web Security
-nav_order: 5
+nav_order: 4
 layout: page
 header-includes:
   - \pagenumbering{gobble}

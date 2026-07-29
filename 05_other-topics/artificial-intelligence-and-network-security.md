@@ -13,7 +13,7 @@ Modern applications are no longer just static websites or simple client-server p
 
 This creates both enormous opportunity and significant new risk.
 
-## Why This Matters for Network Security
+## AI agent and Network Security
 
 The Internet was designed to move bits reliably, not securely. Cryptography can protect data in transit and at rest, but it cannot decide _whether_ an AI agent should be allowed to share a user’s medical information with a restaurant when booking a table, or whether it should execute a shell command that an attacker has hidden inside a webpage.
 
@@ -34,7 +34,7 @@ AI agents blur these lines. A large language model treats everything in its cont
 
 Even when the model itself is not directly tricked, the _context_ in which it operates can be manipulated. An agent that is told to “help the user book a table” may be persuaded by a malicious third-party service that revealing the user’s age or address is suddenly appropriate because of some fabricated emergency. This is the idea behind _context hijacking_ and _contextual integrity_, concepts we will explore in detail.
 
-# Generative AI and Agents – The New Attack Surface
+## Generative AI and Agents – The New Attack Surface
 
 Before we can discuss attacks against AI systems, we need a clear picture of what these systems actually are and how they differ from traditional software.
 
@@ -50,7 +50,7 @@ They are excellent at classification and detection tasks. However, they do not _
 
 This shift from “recognizing patterns” to “generating content and taking actions” has profound security implications.
 
-## How Modern AI Systems Work (High-Level View)
+### How Modern AI Systems Work (High-Level View)
 
 Understanding the basic lifecycle of a modern AI system helps explain where security weaknesses appear.
 
@@ -77,7 +77,7 @@ Two important techniques are commonly added on top of the base model:
 
 These additions give the model access to external data and instructions which also creates new avenues for attack.
 
-## The Rise of AI Agents
+### The Rise of AI Agents
 
 The most significant security change comes not from chatbots that only answer questions, but from _AI agents_: systems that can take actions in the real world.
 
@@ -109,7 +109,7 @@ AI agents blur these boundaries in several important ways:
 
 In short, agents move us from “the program does what the developer wrote” to “the program does what the model decides based on a mixture of trusted and untrusted information”.
 
-## Key Risks Introduced by Agentic Systems
+### Key Risks Introduced by Agentic Systems
 
 When an AI agent is connected to networks and given the ability to act, several new risk categories emerge:
 
@@ -121,13 +121,13 @@ When an AI agent is connected to networks and given the ability to act, several 
 
 As agents become more capable and more deeply integrated into personal and enterprise workflows, the consequences of a successful attack grow from “the model said something wrong” to “the agent took a harmful action on the user’s behalf”.
 
-# Prompt Injection Attacks
+## Prompt Injection Attacks
 
 In the Web Security section, we saw that code injection attacks, such as SQL Injection and XSS, share a common root cause: untrusted user input is treated as executable code or instructions rather than as plain data.
 
 **Prompt injection** is the modern equivalent of these classic injection attacks, but targeted at large language models and AI agents. It is currently one of the most important and difficult security problems in AI systems.
 
-## What Is Prompt Injection?
+### What Is Prompt Injection?
 
 Prompt injection occurs when an attacker manipulates the input to an AI model in such a way that the model treats the attacker’s instructions as legitimate commands, overriding or bypassing the original system instructions.
 
@@ -145,7 +145,7 @@ User input (attacker-controlled):
 
 If the model follows the second set of instructions, it has been successfully injected.
 
-## Why Prompt Injection Is Particularly Dangerous
+### Why Prompt Injection Is Particularly Dangerous
 
 Prompt injection is especially concerning for three reasons:
 
@@ -153,11 +153,11 @@ Prompt injection is especially concerning for three reasons:
 2. _It is easy to perform_: In many cases an attacker only needs to get a string of text into the model’s context (via a webpage, email, document, or user message).
 3. _It is difficult to defend against perfectly_: Because the model itself decides how to interpret instructions, purely technical input sanitization often fails.
 
-## Types of Prompt Injection
+### Types of Prompt Injection
 
 Prompt injection can be categorized by the type of data in which the malicious instructions are hidden.
 
-### 1. Tool-Use Prompt Injection (Most Critical for Agents)
+#### 1. Tool-Use Prompt Injection (Most Critical for Agents)
 
 This is the most dangerous form for networked AI systems. The attacker hides instructions that cause the agent to misuse its tools.
 
@@ -170,7 +170,7 @@ This is the most dangerous form for networked AI systems. The attacker hides ins
 
 Because the agent has real tool access (email, file system, APIs, payments, etc.), the impact can be severe.
 
-### 2. Multimodal Prompt Injection
+#### 2. Multimodal Prompt Injection
 
 When models can process images, PDFs, or other non-text inputs, attackers can embed instructions inside those files.
 
@@ -182,7 +182,7 @@ When models can process images, PDFs, or other non-text inputs, attackers can em
 
 This is especially relevant as more agents gain vision capabilities.
 
-### 3. Coding Prompt Injection
+#### 3. Coding Prompt Injection
 
 When an AI coding assistant generates or executes code, attackers can inject instructions that cause it to produce vulnerable or malicious code.
 
@@ -191,7 +191,7 @@ When an AI coding assistant generates or executes code, attackers can inject ins
 - A user pastes a code snippet and asks the assistant to “review and improve this function”.
 - Hidden in a comment or string is an instruction to insert a backdoor or exfiltrate data when the code runs.
 
-## Why Traditional Defenses Are Often Insufficient
+### Why Traditional Defenses Are Often Insufficient
 
 Many techniques that worked for web applications are less effective here:
 
@@ -202,11 +202,11 @@ Many techniques that worked for web applications are less effective here:
 
 Researchers and attackers have already demonstrated numerous real-world exploits: AI agents tricked into sending unauthorized emails or exfiltrating sensitive data, coding assistants that generate vulnerable code, multimodal models that follow hidden instructions embedded in images or documents, and jailbreaks that bypass safety alignments. As more organizations deploy autonomous agents with broad tool access, including email, calendars, code execution environments, and internal APIs, the potential impact of successful prompt injection attacks continues to grow significantly. Because of these limitations, prompt injection is best addressed through _defense-in-depth_ (which we will cover in a later chapter) rather than relying on any single technique.
 
-# Contextual Security and Context Hijacking
+## Contextual Security and Context Hijacking
 
 In the previous section, we examined **prompt injection**, where an attacker directly inserts malicious instructions that override the agent’s original goals. There is another, more subtle class of attacks that does not require overriding instructions at all. Instead, these attacks manipulate the _context_ in which the agent makes decisions.
 
-## Privacy as Appropriate Information Flow
+### Privacy as Appropriate Information Flow
 
 Traditional definitions of privacy often focus on secrecy (“keep data hidden”) or control (“user decides who sees their data”). A more useful framework for AI agents, proposed by Helen Nissenbaum, is **contextual integrity**.
 
@@ -223,7 +223,7 @@ For example:
 
 The difference is not the data itself, but the _context_, who is receiving the information and for what purpose.
 
-## The Parameters of Contextual Integrity
+### The Parameters of Contextual Integrity
 
 Nissenbaum’s framework identifies five key parameters that determine whether an information flow is appropriate:
 
@@ -239,13 +239,13 @@ An information flow is considered appropriate only when all parameters align wit
 
 Current large language models have only a weak and inconsistent understanding of these contextual norms. They can often be persuaded that sharing sensitive information is acceptable if the attacker provides a plausible-sounding justification.
 
-## Context Hijacking Attacks
+### Context Hijacking Attacks
 
 **Context hijacking** occurs when an attacker supplies additional context that changes the agent’s perception of what is appropriate, without directly telling the agent to ignore its rules.
 
 The attacker does not say “ignore previous instructions”. Instead, they change the _story_ around the request so that the model concludes that revealing private data or performing a sensitive action is now justified.
 
-### Example: The Fabricated Emergency
+#### Example: The Fabricated Emergency
 
 Consider an agent that has been instructed to protect user privacy and only share information when necessary.
 
@@ -257,7 +257,7 @@ The model may now decide that revealing the user’s age is appropriate because 
 
 This type of attack is particularly effective because it exploits the model’s tendency to be helpful and to reason about context, rather than fighting against explicit safety rules.
 
-## Threat Model for Personal Agents
+### Threat Model for Personal Agents
 
 To understand context hijacking, it helps to consider a typical threat model for AI agents:
 
@@ -272,7 +272,7 @@ _Adversary goal_ is to force the agent to reveal contextually private user data 
 
 Note that the attacker does not need to break cryptography or compromise the network layer directly. They only need to influence what the agent _believes_ is appropriate.
 
-# Defending AI Systems (Defense-in-Depth)
+## Defending AI Systems (Defense-in-Depth)
 
 We have now seen two major categories of attacks against AI agents: _prompt injection_ (direct instruction override) and _context hijacking_ (manipulation of perceived appropriateness). Both exploit the fact that current AI systems have limited ability to reliably separate trusted instructions from untrusted data and to understand contextual norms.
 
@@ -280,11 +280,11 @@ Unlike traditional software, where developers write explicit logic, AI agents ma
 
 We can organize defenses into two broad layers:
 
-## The Defense-in-Depth Stack
+### The Defense-in-Depth Stack
 
 We can organize defenses into two broad layers:
 
-### 1. Reasoning-Based Defenses
+#### 1. Reasoning-Based Defenses
 
 These defenses focus on improving or monitoring the model’s own decision-making capabilities rather than relying solely on external controls. The goal is to make the AI system itself more resistant to manipulation and better at recognizing inappropriate requests or actions.
 
@@ -297,7 +297,7 @@ Another important technique involves _classifiers and guardrails_. In this appro
 **AI Critics and Monitors**
 A third layer of reasoning-based defense uses _AI critics and monitors_. These are separate models or monitoring systems that observe the main agent’s reasoning process and actions in real time. When the monitor detects behavior that appears suspicious, inconsistent with policy, or potentially harmful, it can raise an alert, block the action, or ask for additional confirmation. This approach adds an independent layer of oversight, reducing reliance on the main model being perfectly aligned or secure at all times.
 
-### 2. Systems-Level Defenses
+#### 2. Systems-Level Defenses
 
 These defenses operate independently of the model’s internal reasoning. Instead of trying to make the AI more secure on its own, they enforce strict constraints through system architecture and policy. This approach ensures that even if an attacker successfully tricks the model, the potential damage remains limited because the agent simply does not have the technical ability to perform certain actions.
 
@@ -321,7 +321,7 @@ For particularly sensitive operations, many systems incorporate _human-in-the-lo
 **Other Supporting Controls**
 In addition to these core measures, several supporting controls help strengthen the overall security posture. These include rate limiting and behavioral analysis to detect unusual agent activity, strong authentication and authorization mechanisms when agents interact with external services, and comprehensive logging and auditing of all tool calls and data access. Together, these controls create multiple layers of protection that do not depend on the model correctly interpreting every request.
 
-## Practical Recommendations
+### Practical Recommendations
 
 When building or deploying AI agents that interact with networks and user data, the most effective security strategies focus on reducing the opportunities for attack rather than attempting to make the model perfectly secure.
 
@@ -344,11 +344,11 @@ When building or deploying AI agents that interact with networks and user data, 
    Static test sets are useful but insufficient. Red teaming and adaptive evaluation reveal weaknesses that fixed benchmarks miss.
    Finally, It is equally important to _test with adaptive adversaries_ rather than relying only on static test sets. Red teaming and adaptive evaluation are far more effective at uncovering weaknesses that fixed benchmarks tend to miss.
 
-# AI for Network Defense
+## AI for Network Defense
 
 So far in this topic we have focused on the new security challenges that arise when AI agents are connected to networks. However, artificial intelligence is also being used _defensively_ to protect networks and systems. This section provides a brief overview of how AI is applied to network defense.
 
-## The Role of AI in Modern Network Security
+### The Role of AI in Modern Network Security
 
 Traditional network security tools such as firewalls, intrusion detection systems, and antivirus software have long relied on signatures, rules, and human-written heuristics. While these approaches remain effective against many known threats, they face increasing difficulty when confronted with zero-day attacks and novel malware, encrypted traffic that limits deep packet inspection, sophisticated low-and-slow attacks, and the overwhelming volume of data and alerts generated in large modern networks.
 
@@ -363,7 +363,7 @@ Several common applications demonstrate how AI is currently used to strengthen n
 - **Botnet and DDoS Detection** focuses on recognizing coordinated malicious traffic patterns across multiple sources.
 - **Vulnerability Prioritization** uses machine learning to predict which vulnerabilities are most likely to be exploited in the wild, helping security teams focus their limited resources on the highest-risk issues.
 
-## How These Systems Work (High-Level)
+### How These Systems Work (High-Level)
 
 Most defensive AI systems follow a broadly similar pipeline, even though the specific models and data sources may vary.
 The process typically begins with _data collection_, where the system gathers network traffic, security logs, endpoint telemetry, and threat intelligence feeds. This raw data is then passed through _feature extraction_, during which meaningful signals are derived from the original information. These features can include packet sizes and timing patterns, domain reputation scores, sequences of user or device behavior, and other indicators that help distinguish normal activity from potential threats.
@@ -372,7 +372,7 @@ Once useful features have been created, the system moves into the _model trainin
 
 In addition to these core steps, some modern defensive systems now incorporate _generative AI_ components. These capabilities can automatically produce investigation summaries, suggest remediation steps for analysts, or even generate synthetic attack data to improve model training.
 
-## Strengths and Limitations of AI-Based Defenses
+### Strengths and Limitations of AI-Based Defenses
 
 AI-based defensive systems offer several important advantages over traditional rule-based approaches.
 One of the most significant is their _adaptability_. Because these systems learn patterns from data, they can often detect new variants of attacks without requiring constant updates to signatures or rules. They also excel at _scale_, allowing them to process enormous volumes of network traffic, logs, and alerts that would quickly overwhelm human analysts. In addition, AI systems are particularly effective at _behavioral analysis_, enabling them to identify subtle deviations from normal activity that rule-based systems frequently miss. Finally, they support greater _automation_, helping to reduce alert fatigue by automatically prioritizing threats or even triggering remediation for low-risk events.

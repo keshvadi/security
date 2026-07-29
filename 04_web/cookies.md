@@ -1,7 +1,7 @@
 ---
 title: Cookies and Session Management
 parent: Web Security
-nav_order: 4
+nav_order: 3
 layout: page
 header-includes:
   - \pagenumbering{gobble}

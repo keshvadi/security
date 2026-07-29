@@ -22,7 +22,7 @@ header-includes:
 
 ---
 
-## 1. Motivation: Controlling Network Access at Scale
+## Motivation: Controlling Network Access at Scale
 
 Suppose you are given a single machine and asked to harden it against external attacks. A good starting point is to examine every network service it offers to the outside world. Every piece of code that listens on the network is a potential entry point. Bugs are inevitable; bugs in network-facing code are especially dangerous because anyone on the Internet can reach them. The principle is simple: _code you do not run cannot be exploited against you_. Therefore, the first and most effective step for a single machine is to disable every unnecessary network service and to secure carefully the ones that remain.
 
@@ -32,7 +32,7 @@ The observation that still holds at this scale is that _the more network service
 
 A firewall does not eliminate the need to secure the services you _do_ expose. A vulnerable web server behind a firewall is still vulnerable. What the firewall buys you is leverage: one place where you can control access for thousands of machines at once, and a single point where you can react quickly when a new threat appears.
 
-## 2. Security Policies: Deciding Who May Talk to What
+## Security Policies: Deciding Who May Talk to What
 
 Before you can build or configure a firewall, you must have a **security policy** that answers two questions:
 
@@ -66,7 +66,7 @@ Answer: Under default-allow the server is reachable; an attacker can exploit it 
 
 Services are identified by the triplet (machine IP address, protocol TCP or UDP, port number). A typical allowed entry might be "anyone may open a TCP connection to port 443 on the public web server at 1.2.3.4."
 
-## 3. Packet Filters: The Basic Enforcement Tool
+## Packet Filters: The Basic Enforcement Tool
 
 The power of a firewall comes from its position at a _choke point_. Just as airport security is far more effective when every passenger must pass through a small number of checkpoints, network security is far more effective when all traffic between the internal network and the outside world must pass through one (or a few) devices that can inspect and filter it.
 

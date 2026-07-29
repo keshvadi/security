@@ -71,13 +71,13 @@ Not every algorithm that produces “random-looking” numbers provides these gu
 
 One widely deployed cryptographically secure PRNG is HMAC-DRBG (Deterministic Random Bit Generator based on HMAC). Its design illustrates how a simple, well-analysed primitive can be turned into a full-featured generator.
 
-HMAC-DRBG maintains a short internal state consisting of two values, $K$ and $V$. $K$ serves as the HMAC key and $V$ serves as the message input. To produce pseudorandom output the generator repeatedly computes
+HMAC-DRBG maintains a short internal state consisting of two values, $$K$$ and $$V$$. $$K$$ serves as the HMAC key and $$V$$ serves as the message input. To produce pseudorandom output the generator repeatedly computes
 
 $$
 V \leftarrow \operatorname{HMAC}(K, V)
 $$
 
-and concatenates successive values of \(V\) until enough bits have been obtained. Because the output of a secure HMAC is indistinguishable from random to anyone who does not know the key \(K\), the resulting bit string is also indistinguishable from random.
+and concatenates successive values of \($$V$$\) until enough bits have been obtained. Because the output of a secure HMAC is indistinguishable from random to anyone who does not know the key \(K\), the resulting bit string is also indistinguishable from random.
 
 Seeding and reseeding are performed by feeding fresh entropy into additional HMAC calls that update both \(K\) and \(V\). After each generation request the state is deliberately advanced with further HMAC computations so that knowledge of the current state does not reveal earlier output (backtracking resistance). Fresh entropy can be mixed in at any time, restoring unpredictability after a possible compromise (prediction resistance).
 
@@ -89,9 +89,7 @@ The concrete details of the state updates are less important than the underlying
 
 A cryptographically secure PRNG can be used to construct a practical encryption scheme that behaves like a one-time pad. The idea is straightforward: the secret key (together with a unique per-message value) is used to seed the PRNG, the PRNG produces a long keystream of pseudorandom bits, and the plaintext is XORed with that keystream. Decryption is performed by regenerating the identical keystream and XORing again. Because a secure PRNG’s output is indistinguishable from true randomness, the resulting scheme inherits the confidentiality properties of the one-time pad—provided the keystream is never reused.
 
-Keystream reuse is catastrophic for the same reason that one-time-pad key reuse is catastrophic. If two plaintexts \(P_1\) and \(P_2\) are encrypted under the same keystream \(S\), an observer who obtains the two ciphertexts can compute
-
-Keystream reuse is catastrophic for the same reason that one-time-pad key reuse is catastrophic. If two plaintexts $P_1$ and $P_2$ are encrypted under the same keystream $S$, an observer who obtains the two ciphertexts can compute
+Keystream reuse is catastrophic for the same reason that one-time-pad key reuse is catastrophic. If two plaintexts $$P_1$$ and $$P_2$$ are encrypted under the same keystream $$S$$, an observer who obtains the two ciphertexts can compute
 
 $$
 C_1 \oplus C_2 = (P_1 \oplus S) \oplus (P_2 \oplus S) = P_1 \oplus P_2.

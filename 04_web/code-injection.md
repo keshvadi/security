@@ -1,7 +1,7 @@
 ---
 title: Code Injection
 parent: Web Security
-nav_order: 2
+nav_order: 6
 layout: page
 header-includes:
   - \pagenumbering{gobble}
@@ -248,15 +248,6 @@ This code loads Node.js’s built-in child_process module (the standard way to r
 ### 3. Server-Side Template Injection (SSTI)
 
 Modern web frameworks rely on template engines such as Jinja2 (Python), Twig (PHP), Freemarker (Java), and others to generate dynamic HTML. These engines are designed to safely insert data into templates. However, when developers pass user input directly into the template context without proper sandboxing or escaping, attackers can inject malicious template code that gets executed on the server.
-
-For example, in Jinja2 a simple test payload like `{{7*7}}` will output `49` if the template engine is evaluating expressions. More dangerous payloads can access internal objects and even execute system commands:
-
-```jinja
-{{config}}
-{{self.__init__.__globals__['os'].popen('id').read()}}
-```
-
-The second line above can execute operating system commands and return their output, leading to full remote code execution on the server.
 
 > **Note**: XSS is technically a form of code injection, but because it targets the browser (client-side) rather than the server, it is usually covered separately.
 

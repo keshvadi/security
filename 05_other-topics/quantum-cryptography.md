@@ -40,7 +40,7 @@ Two main families of solutions are being developed to address these challenges:
 
 These two approaches are complementary rather than competing. Many organizations are planning **hybrid** deployments that combine classical cryptography, post-quantum algorithms, and (where practical) quantum key distribution to provide defense-in-depth during the transition period.
 
-## 2. Background: Quantum Computing Basics (Just Enough Physics)
+## Background: Quantum Computing Basics (Just Enough Physics)
 
 Before we can understand how Quantum Key Distribution works, we need a small amount of background on quantum mechanics.
 
@@ -81,7 +81,7 @@ Photons can be polarized in different ways. The two most commonly used bases in 
 
 In the same way, a **horizontally polarized** photon has its electric field oscillating left and right, while a **vertically polarized** photon has its electric field oscillating up and down. Photons can also be polarized at other angles, such as 45° or 135°.
 
-## 3. Quantum Key Distribution (QKD) — The BB84 Protocol
+## Quantum Key Distribution (QKD) — The BB84 Protocol
 
 Now that we have the necessary quantum background, we can examine the most important and widely deployed Quantum Key Distribution protocol: **BB84**, named after its inventors Charles Bennett and Gilles Brassard who proposed it in 1984.
 
@@ -174,7 +174,7 @@ The security of BB84 relies on the fact that any measurement by Eve disturbs the
 
 This is fundamentally different from classical networks. In classical cryptography, passive eavesdropping is undetectable. In QKD, **any eavesdropping is detectable**.
 
-## 4. Security Properties and Proofs of QKD
+## Security Properties and Proofs of QKD
 
 The real power of Quantum Key Distribution lies not just in how it works, but in **what it guarantees**.
 Unlike every classical key exchange protocol, QKD offers a fundamentally different kind of security.
@@ -210,7 +210,7 @@ The theoretical security proofs for protocols such as BB84 rely on several ideal
 In practice, the last point is especially important: QKD still needs a way for Alice and Bob to authenticate their classical messages.
 This is usually achieved with pre-shared keys or post-quantum signatures.
 
-## 5. Practical Challenges, Limitations, and Attacks on Real QKD Systems
+## Practical Challenges, Limitations, and Attacks on Real QKD Systems
 
 While the theoretical security of protocols like BB84 is extremely strong, real-world Quantum Key Distribution systems face significant engineering and security challenges that limit their practicality today.
 
@@ -230,7 +230,7 @@ While the theoretical security of protocols like BB84 is extremely strong, real-
   - _Trojan Horse Attacks_, in which an attacker injects light into Alice’s or Bob’s equipment to learn internal settings.
   - _Timing side-channel attacks_ that analyze small differences in detector response times.
 
-## 6. Real-World Deployments
+## Real-World Deployments
 
 Quantum Key Distribution has moved beyond laboratory experiments. Several countries and organizations have built operational quantum communication networks, though these are still limited in scale and primarily used for high-security applications.
 

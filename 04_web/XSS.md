@@ -1,7 +1,7 @@
 ---
 title: Cross-Site Scripting (XSS)
 parent: Web Security
-nav_order: 6
+nav_order: 5
 layout: page
 header-includes:
   - \pagenumbering{gobble}

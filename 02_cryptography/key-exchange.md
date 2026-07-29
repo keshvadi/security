@@ -80,38 +80,38 @@ Here is a summary of Diffie-Hellman key exchange:
 
 To make the protocol concrete, consider the following small (and deliberately insecure) parameters:
 
-- Prime modulus \( p = 23 \)
-- Generator \( g = 5 \)
-- Alice’s secret \( a = 6 \)
-- Bob’s secret \( b = 15 \)
+- Prime modulus $$p = 23$$
+- Generator $$g = 5$$
+- Alice’s secret $$a = 6$$
+- Bob’s secret $$b = 15$$
 
 Alice computes her public value:
 
-\[
+$$
 A = g^a \bmod p = 5^6 \bmod 23 = 8
-\]
+$$
 
 Bob computes his public value:
 
-\[
+$$
 B = g^b \bmod p = 5^{15} \bmod 23 = 19
-\]
+$$
 
 Alice now uses Bob’s public value to obtain the shared secret:
 
-\[
+$$
 S = B^a \bmod p = 19^6 \bmod 23 = 2
-\]
+$$
 
 Bob uses Alice’s public value and obtains the same result:
 
-\[
+$$
 S = A^b \bmod p = 8^{15} \bmod 23 = 2
-\]
+$$
 
-Both parties arrive at the shared secret \( S = 2 \).
+Both parties arrive at the shared secret $$S = 2$$.
 
-Of course a 5-bit prime is trivial to break by exhaustive search. In real systems the prime \( p \) is typically 2048 bits long (or an elliptic-curve group of comparable strength is used), making the discrete-logarithm problem far beyond the reach of current computation.
+Of course a 5-bit prime is trivial to break by exhaustive search. In real systems the prime $$p$$ is typically 2048 bits long (or an elliptic-curve group of comparable strength is used), making the discrete-logarithm problem far beyond the reach of current computation.
 
 ## Elliptic-Curve Diffie-Hellman
 
@@ -121,10 +121,10 @@ The Diffie-Hellman protocol can be realized with any suitable one-way function. 
 
 The protocol itself is identical:
 
-- Alice and Bob agree on a public base point \(G\) on an elliptic curve.
-- Alice chooses a secret integer \(a\) and sends the point \(A = a \cdot G\).
-- Bob chooses a secret integer \(b\) and sends the point \(B = b \cdot G\).
-- Each party multiplies the received point by its own secret, obtaining the same shared point \(S = a \cdot b \cdot G\).
+- Alice and Bob agree on a public base point $$G$$ on an elliptic curve.
+- Alice chooses a secret integer $$a$$ and sends the point $$A = a \cdot G$$.
+- Bob chooses a secret integer $$b$$ and sends the point $$B = b \cdot G$$.
+- Each party multiplies the received point by its own secret, obtaining the same shared point $$S = a \cdot b \cdot G$$.
 
 Only the underlying mathematical one-way function has changed. The security of ECDH rests on the elliptic-curve discrete-logarithm problem rather than on the classic discrete-logarithm problem modulo a prime. The practical advantage is that ECDH achieves roughly the same security level as finite-field Diffie-Hellman with substantially smaller keys and faster arithmetic (for example, a 256-bit elliptic curve is considered comparable to a 2048-bit prime modulus).
 
@@ -142,10 +142,12 @@ Diffie-Hellman is secure against a passive eavesdropper (Eve) who can only obser
 
 Mallory can perform a classic man-in-the-middle attack as follows. When Alice sends her public value \(A = g^a \bmod p\), Mallory replaces it with her own value \(M = g^m \bmod p\). Likewise, when Bob sends \(B = g^b \bmod p\), Mallory replaces it with the same \(M\). After the exchange:
 
-- Alice computes what she believes is the shared secret: \(K_A = M^a = g^{ma} \bmod p\)
-- Bob computes a different value: \(K_B = M^b = g^{mb} \bmod p\)
+Mallory can perform a classic man-in-the-middle attack as follows. When Alice sends her public value $$A = g^a \bmod p$$, Mallory replaces it with her own value $$M = g^m \bmod p$$. Likewise, when Bob sends $$B = g^b \bmod p$$, Mallory replaces it with the same $$M$$. After the exchange:
 
-Alice and Bob therefore do not share a key with each other. Instead, Alice shares a key with Mallory and Bob shares a different key with Mallory. Mallory, knowing \(m\), can compute both of those keys. She can now decrypt everything Alice sends, read or modify it, re-encrypt it under Bob’s key, and forward it, completely transparently.
+- Alice computes what she believes is the shared secret: $$K_A = M^a = g^{ma} \bmod p$$
+- Bob computes a different value: $$K_B = M^b = g^{mb} \bmod p$$
+
+Alice and Bob therefore do not share a key with each other. Instead, Alice shares a key with Mallory and Bob shares a different key with Mallory. Mallory, knowing $$m$$, can compute both of those keys. She can now decrypt everything Alice sends, read or modify it, re-encrypt it under Bob’s key, and forward it, completely transparently.
 
 The root cause of the attack is the absence of _authentication_ (and integrity protection) for the messages that carry the Diffie-Hellman public values. Nothing in the basic protocol lets Alice verify that the value she received really came from Bob, and vice versa.
 

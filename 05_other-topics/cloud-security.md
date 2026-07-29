@@ -143,7 +143,7 @@ Every virtual machine can query a special link-local address (`169.254.169.254`)
 
 **IMDSv2** adds a session token requirement, significantly reducing this risk. Organizations should disable IMDSv1 wherever possible.
 
-## 3. Identity and Access Management (IAM)
+## Identity and Access Management (IAM)
 
 In traditional on-premises environments, security relied heavily on network perimeters defined by firewalls, IP ranges, and physical boundaries.
 In the cloud, this model changes significantly. Because almost all interactions happen through APIs rather than direct network access, _identity becomes the primary control plane_.
@@ -207,7 +207,7 @@ Common mistakes that violate this principle include:
 - Assigning high-privilege roles such as `AdministratorAccess` to non-administrative users or workloads
 - Relying on long-lived access keys instead of temporary role-based credentials
 
-### 5.4 Federation and Single Sign-On (SSO)
+### Federation and Single Sign-On (SSO)
 
 Most organizations do not manage cloud user accounts in isolation. Instead, they connect their cloud Identity and Access Management (IAM) system to a central **enterprise identity provider** using a technique called **federation**.
 Through federation, users authenticate using their existing corporate credentials rather than creating separate usernames and passwords for the cloud.
@@ -222,7 +222,7 @@ Once Okta successfully authenticates her, it sends a secure token to AWS. AWS tr
 
 From Sarah’s perspective, she only needs to remember one set of corporate credentials. From the organization’s perspective, access is centrally controlled: when Sarah changes teams or leaves the company, her permissions can be updated or revoked in one place (the enterprise identity provider) rather than in every cloud account.
 
-### 5.5 Common IAM Attacks and Misconfigurations
+### Common IAM Attacks and Misconfigurations
 
 IAM-related issues are among the leading causes of cloud security breaches. Attackers frequently exploit overly permissive roles that allow them to escalate privileges far beyond what was originally intended. Another common problem is the exposure of long-lived access keys in code repositories, configuration files, or public logs, which gives attackers immediate and persistent access to cloud resources.
 
@@ -230,7 +230,7 @@ Publicly accessible instance metadata services (particularly the older IMDSv1) c
 
 Once an attacker obtains valid IAM credentials (whether through any of the methods above), they can often move laterally across the entire cloud account with very little traditional network activity. This makes IAM misconfigurations especially dangerous in cloud environments.
 
-### 5.6 IAM Security Best Practices
+### IAM Security Best Practices
 
 Effective identity and access management is one of the most important layers of defense in cloud environments. Because the cloud is heavily API-driven and permissions are often the primary attack vector, organizations should follow several core practices to reduce risk.
 

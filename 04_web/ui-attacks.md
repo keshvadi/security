@@ -12,7 +12,7 @@ output:
 
 # UI Attacks: Clickjacking and Phishing
 
-## 1. Introduction to UI Attacks
+## Introduction to UI Attacks
 
 Most of the attacks we have studied so far (XSS, CSRF, SQL Injection, etc.) exploit technical vulnerabilities in code, browsers, or servers. However, there is another important class of attacks that instead exploits how users perceive and interact with web interfaces.
 
@@ -38,7 +38,7 @@ Two of the most important UI attacks are:
 
 Both attacks rely on _visual deception_ rather than breaking cryptographic protections or finding code bugs.
 
-## 2. Clickjacking Attacks
+## Clickjacking Attacks
 
 **Clickjacking** (also known as **UI Redressing**) is an attack in which the attacker tricks the victim into clicking on an element that is different from what the victim believes they are clicking.
 
@@ -58,7 +58,7 @@ The attacker draws a fake mouse cursor on the page using HTML and JavaScript. Th
 **4. Full Browser-in-Browser Attacks**  
 A more advanced and convincing technique where the attacker creates a complete fake browser window (including address bar, tabs, security indicators, and browser chrome) using HTML, CSS, and JavaScript. The victim believes they are interacting with their real browser and a legitimate website, but everything is controlled by the attacker.
 
-## 3. Clickjacking Defenses
+## Clickjacking Defenses
 
 There are several effective ways to defend against clickjacking. The strongest defenses are implemented on the server side using HTTP headers.
 
@@ -110,7 +110,7 @@ In addition to technical controls, you can make clickjacking harder through good
 - **Attention-directing techniques** which highlight the area around important buttons or temporarily disable other parts of the page
 - **Click delay** that require the user to hover over a sensitive button for a short time before it becomes clickable
 
-## 4. Phishing Attacks
+## Phishing Attacks
 
 **Phishing** is a social engineering attack in which the attacker creates a fake website, email, or message that appears legitimate in order to trick the victim into revealing sensitive information (such as passwords, credit card numbers, or 2FA codes) or performing harmful actions (such as installing malware or authorizing a transaction).
 
@@ -153,7 +153,7 @@ Phishing succeeds because it exploits several human tendencies:
 
 Even technically sophisticated users can fall victim to well-crafted phishing attacks.
 
-## 5. Defenses Against Phishing
+## Defenses Against Phishing
 
 Phishing is difficult to eliminate completely because it exploits human psychology, but a combination of technical and non-technical defenses can significantly reduce its effectiveness.
 

@@ -47,7 +47,7 @@ This is one of the hardest problems in web security. Users routinely have multip
 - Perform actions on your behalf without your knowledge or consent
 - Interfere with pages belonging to a different origin
 
-## 2. URLs: Locating Resources on the Web
+## URLs: Locating Resources on the Web
 
 Every resource on the web (whether it is a webpage, an image, a PDF, a video, or an API endpoint) is identified by a _Uniform Resource Locator (URL)_. A URL tells your browser exactly where to find a piece of information and how to retrieve it.
 Before diving into URLs, it is useful to understand three related but distinct terms:
@@ -199,7 +199,7 @@ Because GET parameters are part of the visible URL, they are easily logged, book
 
 When a browser receives an HTTP response, the body is usually an HTML document. Modern webpages, however, are built from three core technologies working together: HTML, CSS, and JavaScript. These three pillars define the structure, appearance, and behavior of almost every website on the Internet.
 
-### 4.1 HTML
+### HTML
 
 **HTML (Hypertext Markup Language)** provides the structure and content of a webpage. It allows us to create headings, paragraphs, links, images, forms, tables, and many other elements.
 You do not need to be an HTML expert for this course, but you must recognize several elements that have important security implications:
@@ -212,7 +212,7 @@ You do not need to be an HTML expert for this course, but you must recognize sev
 
 The `<iframe>` element is particularly important. When one webpage embeds another using an iframe, the browser enforces frame isolation. The outer page cannot read or modify the content of the inner page, and vice versa. This is an early form of the same-origin policy we will study in detail later.
 
-### 4.2 CSS
+### CSS
 
 **CSS (Cascading Style Sheets)** controls the visual appearance of an HTML page like fonts, colors, layout, spacing, animations, and more.
 While CSS is primarily a styling language, it is surprisingly powerful when used maliciously. An attacker who can inject malicious CSS can:
@@ -223,7 +223,7 @@ While CSS is primarily a styling language, it is surprisingly powerful when used
 
 In practice, if an attacker can force a victim to load malicious CSS, the effect is often comparable to forcing the victim to load malicious JavaScript.
 
-### 4.3 JavaScript
+### JavaScript
 
 **JavaScript** is a full-featured programming language that runs directly inside the browser. It is currently the only programming language that all modern web browsers can execute natively. This means that no matter which client-side framework or language you use (such as React, Vue, Angular, Svelte, or TypeScript), the code is ultimately translated or compiled into plain JavaScript that the browser can run. Even server-side frameworks (like Ruby on Rails, Django, or PHP) typically generate HTML and JavaScript bundles that the browser executes.
 
@@ -244,7 +244,7 @@ JavaScript can be included in a webpage in several ways:
 
 Because JavaScript is so powerful, controlling where it comes from and what it is allowed to do is a central goal of web security.
 
-## 5. How a Webpage Actually Loads
+## How a Webpage Actually Loads
 
 Now that we have covered URLs, HTTP, and the three pillars of web content, let’s see how everything works together when you visit a website.
 When you type a URL into your browser and press Enter, the following steps occur (simplified):
