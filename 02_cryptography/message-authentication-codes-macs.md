@@ -139,6 +139,3 @@ While powerful, using these modes improperly will lead to catastrophic failure i
 One such mode is called AES-GCM (Galois Counter Mode). The specifics are out of scope for these notes, but at a high level, AES-GCM is a stream cipher that operates similarly to AES-CTR (counter) mode. The security properties of AES-GCM are also similar to CTR--in particular, IV reuse also destroys the security of AES-GCM. Since the built-in MAC in AES-GCM is also a function of the CTR mode encryption, improper use of AES-GCM causes loss of both confidentiality and integrity.
 
 Some other modes include CCM mode, CWC mode, and OCB mode, but these are out of scope for these notes.
-
-
-$$

@@ -13,7 +13,7 @@ In this section we build symmetric-key encryption schemes that provide confident
 
 For modern schemes we treat all messages as _bit strings_: sequences of bits such as `1101100101010101`. Text, images, and essentially any other form of data can be converted into a bit string before encryption, so this is a convenient and realistic abstraction.
 
-## 1. IND-CPA Security
+## IND-CPA Security
 
 Recall from the previous topic that confidentiality was defined to mean that an attacker cannot read our messages. This definition, while intuitive, is quite open-ended. If the attacker can read the first half of our message but not the second half, is that confidential? What if the attacker can deduce that our message starts with the words "Dear Bob?" (for example, many HTTP requests begin with method lines such as `GET / ...`). It might also be the case that the attacker had some partial information about the message $$M$$ to begin with. Perhaps she knew that the last bit of $$M$$ is a $$0$$, or that $$90\%$$ of the bits of $$M$$ are $$1$$'s, or that $$M$$ is one of BUY! or SELL but does not know which.
 

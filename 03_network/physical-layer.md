@@ -87,7 +87,7 @@ In the 1970s, the U.S. Navy, with support from the NSA, carried out Operation Iv
 
 Every month, divers would retrieve the recorded tapes. Because the Soviets believed their undersea cables were physically secure, they transmitted a large amount of sensitive information **without encryption**.
 
-![Operation Ivy Bells – Historical undersea cable tapping](assets/images/ivy-bells.jpg)
+<img src="{{ site.baseurl }}/assets/images/ivy-bells.jpg" alt="Operation Ivy Bells – Historical undersea cable tapping" />
 
 > **Figure**: Conceptual illustration of undersea cable tapping during the Cold War (Operation Ivy Bells).
 
@@ -99,7 +99,7 @@ Attackers can tap fiber optic cables using a technique called _micro-bending_. T
 
 Because only a small amount of light is diverted, the main signal continues to its destination with minimal disruption. In many cases, the communicating parties remain completely unaware that their physical link has been compromised.
 
-![Fiber optic cable tapping using micro-bending technique](assets/images/fiber-tap.jpg)
+<img src="{{ site.baseurl }}/assets/images/fiber-tap.jpeg" alt="Fiber optic cable tapping using micro-bending technique" />
 
 > **Figure**: Simplified diagram of fiber optic tapping using a micro-bend clamping device.
 

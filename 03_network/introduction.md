@@ -362,8 +362,7 @@ When the packet arrives at the destination computer:
 
 This up-and-down process is completely automatic and invisible to the user, but it is the reason the Internet can support millions of simultaneous conversations across thousands of different applications and networks.
 
-<img src="../assets/images/headers.png" alt="A diagram of a network packet structure, with the link layer header first,
-then the IP header, then the transport layer header, then the application data" width="60%">
+<img src="{{ site.baseurl }}/assets/images/headers.png" A diagram of a network packet structure, with the link layer header first, then the IP header, then the transport layer header, then the application data" width="60%" />
 
 ### Why This Design Is Powerful (and Vulnerable)
 

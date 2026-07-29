@@ -71,11 +71,11 @@ Not every algorithm that produces “random-looking” numbers provides these gu
 
 One widely deployed cryptographically secure PRNG is HMAC-DRBG (Deterministic Random Bit Generator based on HMAC). Its design illustrates how a simple, well-analysed primitive can be turned into a full-featured generator.
 
-HMAC-DRBG maintains a short internal state consisting of two values, \(K\) and \(V\). \(K\) serves as the HMAC key and \(V\) serves as the message input. To produce pseudorandom output the generator repeatedly computes
+HMAC-DRBG maintains a short internal state consisting of two values, $K$ and $V$. $K$ serves as the HMAC key and $V$ serves as the message input. To produce pseudorandom output the generator repeatedly computes
 
-\[
+$$
 V \leftarrow \operatorname{HMAC}(K, V)
-\]
+$$
 
 and concatenates successive values of \(V\) until enough bits have been obtained. Because the output of a secure HMAC is indistinguishable from random to anyone who does not know the key \(K\), the resulting bit string is also indistinguishable from random.
 
@@ -91,9 +91,11 @@ A cryptographically secure PRNG can be used to construct a practical encryption 
 
 Keystream reuse is catastrophic for the same reason that one-time-pad key reuse is catastrophic. If two plaintexts \(P_1\) and \(P_2\) are encrypted under the same keystream \(S\), an observer who obtains the two ciphertexts can compute
 
-\[
+Keystream reuse is catastrophic for the same reason that one-time-pad key reuse is catastrophic. If two plaintexts $P_1$ and $P_2$ are encrypted under the same keystream $S$, an observer who obtains the two ciphertexts can compute
+
+$$
 C_1 \oplus C_2 = (P_1 \oplus S) \oplus (P_2 \oplus S) = P_1 \oplus P_2.
-\]
+$$
 
 The keystream cancels, and the attacker learns the relationship between the two plaintexts. In many practical settings this leakage is enough to recover substantial amounts of data.
 
