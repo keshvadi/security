@@ -370,7 +370,7 @@ Encapsulation gives us clean separation of concerns: routers only need to unders
 
 In the next (and final) section of this topic we will meet the three main types of network adversaries and see exactly where they can attack this layered system.
 
-## 8. Network Adversaries and Threat Models
+## Network Adversaries and Threat Models
 
 Throughout this topic we have seen that the classic Internet protocols were designed for _best-effort delivery_, not for security. To understand the attacks that appear in the rest of this Unit, we need to know exactly what kinds of adversaries we are defending against.
 

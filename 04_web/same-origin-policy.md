@@ -12,7 +12,7 @@ output:
 
 # Same-Origin Policy
 
-## 1. Motivation: Why Browsers Need Isolation
+## Motivation: Why Browsers Need Isolation
 
 The modern web runs untrusted code from many different sources in the same browser. Without strong isolation, a malicious website could read your data from other sites, steal your session cookies, or perform actions on your behalf, for example, transferring money from your bank account while you have another tab open.
 
@@ -20,7 +20,7 @@ The **Same-Origin Policy (SOP)** is the browser’s fundamental security mechani
 
 It allows websites to load useful third-party content such as images, fonts, analytics scripts, and widgets, while sandboxing that content. The basic idea is to treat anything coming from a different origin as if it were running in its own separate browser tab, completely isolated from the rest of the page. (We will define what an _origin_ is shortly.) This policy creates a clear boundary between websites: even if many pages are open at the same time (in different tabs, windows, or inside `<iframe>` elements), a page from `evil.com` cannot access or manipulate the data of `good.com` (or any other site).
 
-## 2. What Is an Origin?
+## What Is an Origin?
 
 An **origin** is the fundamental unit of isolation in the browser. The Same-Origin Policy uses origins to decide what web content is allowed to interact with other web content.
 
@@ -55,7 +55,7 @@ This means the following two URLs have the **same origin**:
 - `https://www.example.com/page1`
 - `https://www.example.com/page2?user=alice#top`
 
-## 3. Same Origin or Not? (Examples)
+## Same Origin or Not? (Examples)
 
 Determining whether two URLs have the same origin is a fundamental skill in web security. Let’s practice with some examples.
 
@@ -71,7 +71,7 @@ Determining whether two URLs have the same origin is a fundamental skill in web 
 | `http://localhost`              | `http://localhost:3000`   | **No**       | Different port                                |
 | `https://user:pass@example.com` | `https://example.com`     | **Yes**      | Username/password is not part of the origin   |
 
-## 4. How SOP Applies to Different Web Features
+## How SOP Applies to Different Web Features
 
 The Same-Origin Policy does not apply uniformly to everything. Different parts of the web platform have slightly different rules. Understanding these nuances is essential for both developers and security researchers.
 

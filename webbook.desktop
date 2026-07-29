@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name=Computer Network Security
+Comment=Open the webbook
+Exec=xdg-open https://keshvadi.github.io/security/
+Type=Application
+Icon=text-html
+Terminal=false

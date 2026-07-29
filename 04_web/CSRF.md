@@ -22,7 +22,7 @@ In simple terms, the attacker causes the victim’s browser to perform actions _
 
 Although modern defenses, especially `SameSite` cookies and CSRF tokens, have made CSRF harder to exploit, it remains a relevant threat. Many older applications and APIs still lack proper protection, developers sometimes forget to secure new endpoints (especially JSON APIs and microservices), some frameworks do not enable CSRF protection by default, and sophisticated attacks can still bypass weak implementations.
 
-## 2. How CSRF Attacks Work
+## How CSRF Attacks Work
 
 A CSRF attack follows a simple pattern: the attacker tricks the victim’s browser into sending a request to a legitimate website while the victim is authenticated.
 Let’s look at two classic attack techniques.
