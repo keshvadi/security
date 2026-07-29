@@ -1,7 +1,7 @@
 ---
 title: Firewalls
 parent: Network Security
-nav_order: 11
+nav_order: 13
 layout: page
 header-includes:
   - \pagenumbering{gobble}
@@ -9,101 +9,215 @@ header-includes:
 
 # Firewalls
 
-## Introduction to Controlling Network Access
+## Cheat sheet
 
-Suppose you are given a machine and asked to harden it against external attacks. How would you go about doing it?
+- **Core Concept**: A firewall is a network choke point that enforces an _access control policy_ between a trusted internal network and the untrusted external Internet (or between sensitive internal segments).
+- **Default-Deny (Whitelist) vs. Default-Allow (Blacklist)**: Default-deny starts by blocking everything and explicitly permits only the services you need. It _fails closed_ (mistakes cause loss of functionality, not breaches) and is strongly preferred. Default-allow _fails open_.
+- **Packet Filters**: The basic building block.
+  - **Stateless**: Examines each packet's headers (source/dest IP, ports, protocol) independently against an ordered list of rules. First match wins (ALLOW or DROP).
+  - **Stateful**: Tracks active connections. Automatically permits return traffic for allowed outbound connections and can handle complex protocols (e.g., FTP data channels).
+- **Major Strengths**: Central administration (one place to update policy for thousands of machines), easy deployment (transparent to most internal hosts), orthogonal protection for legacy systems.
+- **Major Weaknesses**: The "crunchy outer coating with a soft, chewy center" (once an attacker is inside the perimeter, the firewall provides no help); loss of functionality; tunneling over allowed ports; inability to inspect encrypted traffic or stop application-layer attacks; high risk of subtle misconfiguration.
+- **Circumvention**: Run anything over allowed ports (e.g., BitTorrent over UDP/53 DNS), use external relays, or tunnel inside HTTPS. Encryption hides intent.
 
-A possible starting point might be to look at the functionality and the network services that this machine is providing to the outside world. If any of the network services have bugs or security flaws, an attacker could exploit that part of the service and might be able to penetrate your machine. As we know, bugs are inevitable, and bugs in security-critical applications often lead to security holes. Therefore, the more network services that your machine runs, the greater the risk of attacks.
+---
 
-The general principle here is that bugs present in code that you do not run cannot hurt you. Therefore, the less functionality you try to provide, the less of an opportunity exists for security vulnerabilities in that functionality. This suggests one simple way to reduce the risk of external attack: _Turn off every unnecessary network service_. By disabling every network-accessible application that isn’t absolutely needed, you are essentially building a stripped-down box that runs the least amount of code necessary. After all, any code that you don’t run, can’t hurt you. And for any network service that you do run, double-check that it has been implemented and configured securely, and take every precaution possible to ensure that it is safe.
+## 1. Motivation: Controlling Network Access at Scale
 
-While this is an intuitive and fairly effective approach when you only have one or two machines to secure, the problem becomes slightly more complicated when we scale things up. Suppose you are now in charge of security for all of Caltopia, and your job is to protect the computer systems, the network and its infrastructure from external attacks. If Caltopia has thousands of computers, it will be extremely difficult to harden every single machine individually as each computer could have different operating systems and different hardware platforms. Furthermore, different users could have very different requirements, where a service that could be disabled for one user might be essential to another user’s job. At this scale, it is often hard just to get an accurate list of all machines inside the company, and if you miss even one machine, it could then become a vulnerable point that could be broken into and serve as a launching point for attackers to attack the rest of the Caltopia network. So, managing each computer individually is probably infeasible at this scale.
+Suppose you are given a single machine and asked to harden it against external attacks. A good starting point is to examine every network service it offers to the outside world. Every piece of code that listens on the network is a potential entry point. Bugs are inevitable; bugs in network-facing code are especially dangerous because anyone on the Internet can reach them. The principle is simple: _code you do not run cannot be exploited against you_. Therefore, the first and most effective step for a single machine is to disable every unnecessary network service and to secure carefully the ones that remain.
 
-However, it is still true that one risk factor is the number of network services that are accessible to outsiders. This suggests a possible defense; if we could block, _in the network_, outsiders from being able to interact with many of the network services from running on internal machines, we could potentially reduce the risk. This is exactly the concept behind _firewalls_, which are devices designed to block access to network services that are running on internal machines. Essentially, firewalls reduce risk by blocking network outsiders from having unwanted access to all the network services by acting as a choke point between the internet (outsiders) and your internal network. Now, all we need to know to implement a firewall is:
+This approach works reasonably well when you have only a handful of machines. But now imagine you are responsible for the entire TRU University network—thousands of computers, dozens of departments, users with wildly different requirements, multiple operating systems, and machines that you may not even know exist. Auditing and hardening every single host individually is impractical. You will inevitably miss machines, and any missed machine becomes a beachhead from which an attacker can pivot to the rest of the campus.
 
-1. What is our _security policy_? Namely, which network services should be made visible to the outside world and which should be blocked? How do we discern insiders from outsiders?
-2. How will we _enforce the security policy_? How do we build a firewall that does what we want it to do and what are the implementation issues?
+The observation that still holds at this scale is that _the more network services are reachable from the outside, the larger the attack surface_. If we cannot perfectly harden every host, perhaps we can reduce the number of services that outsiders can even _attempt_ to reach. This is the fundamental idea behind a **firewall**: a device (or set of devices) placed at a strategic point in the network that blocks unwanted traffic before it ever reaches the internal hosts.
 
-## Security Policy
+A firewall does not eliminate the need to secure the services you _do_ expose. A vulnerable web server behind a firewall is still vulnerable. What the firewall buys you is leverage: one place where you can control access for thousands of machines at once, and a single point where you can react quickly when a new threat appears.
 
-If you wanted to visualize the topology of the internal network, you could think about having an internal network, which hosts all of the company’s machines, the external world, which is the rest of the internet, and a communications link between the two.
+## 2. Security Policies: Deciding Who May Talk to What
 
-How do we decide which computers have to be affected by the firewall and which don’t? A very simple threat model could have us decide that we trust all company employees, but we don’t trust anyone else. Thus, we define the internal network to contain machines owned by trusted employees and the external world to include everyone (and everything) else. The link to our Internet Service Provider (ISP) could be the link between the two networks.
+Before you can build or configure a firewall, you must have a **security policy** that answers two questions:
 
-Perhaps the simplest security policy that we could easily implement would be an outbound-only policy. Before we delve into how it works, let’s define and distinguish between inbound and outbound connections. An _inbound connection_ is one that is initiated by external users and attempts to connect to services that are running on internal machines. On the other hand, an _outbound connection_ is one which is initiated by an internal user, and attempts to initiate contact with external services. An outbound-only connection would permit all outbound connections, but inbound connections would be denied outright. The reasoning behind such a connection is that internal users are trusted, so if they wish to open a connection, we will let them. The effect of the resulting connection is that none of our network services are visible to the outside world, but they can still be accessed by internal users. The issue is that such a security policy is likely too restrictive for any large organization since it means that the company cannot run any public web server, a mail server, an FTP server, etc. Therefore, we need a little more flexibility in defining our security policy.
+1. Which network services should be visible to the outside world, and which should be blocked?
+2. How do we distinguish "insiders" from "outsiders"?
 
-More generally, our security policy is going to be some form of _access control policy_, wherein we have two subjects: a generic internal user and an anonymous external user. We then define an _object_ to be the set of network services that are run on all inside machines; if there are 100 machines, and each machine runs 7 network services, then we have 700 objects. An access control policy should specify, for each subject and each object, whether that subject has permission to access that object.
+### Inbound versus Outbound Connections
 
-A firewall is used to enforce a specific kind of access control policy, one where insider users are permitted to connect to any network service desired, whereas external users are restricted; there are some services that are intended to be externally visible (and thus, external users are permitted to connect to those services), but there are also other services that are not intended to be accessible from the outside world (and these services are blocked by the access policy).
+An **inbound connection** is initiated by an external party and attempts to reach a service running on an internal machine (for example, someone on the Internet trying to load TRU's public website).
 
-As a security administrator, your first job would be to identify a security policy, namely which services should external users have access to and which services should external users not have access to. Generally, there are two main philosophies that we might use to determine which services we allow external users to connect to:
+An **outbound connection** is initiated by an internal user or machine and reaches out to a service on the external Internet (a student loading a page from Wikipedia).
 
-- _Default-allow or blacklist_: By default, every network service is permitted unless it has been specifically listed as denied. Under this approach, one might start by allowing external users to access all internal services, and then mark a couple of services that are known to be unsafe and therefore should be blocked. For example, if you learn today that there is a new threat that targets Extensible Messaging and Presence Protocol (XMPP) servers, you might be inclined to revise your security policy by denying outsiders access to your XMPP servers.
+Many threat models treat inbound connections as riskier: internal users have usually authenticated themselves (by logging into a machine or by physical presence on campus), while external users could be anyone. A simple but often too-restrictive policy is therefore "outbound only": permit all outbound connections, deny all inbound. This makes no internal services visible to the world, but it also prevents TRU from running any public web server, mail server, or other externally useful service.
 
-- _Default-deny or whitelist_: By default, every network service is denied to external users, unless it has been specifically listed as allowed. Here, we might start off with a list of a few known servers that need to be visible to the outside world (which have been judged to be reasonably safe). External users will be denied access to any service that is not on this list of allowed services. For example, if Caltopia users complain that their department’s File Transfer Protocol (FTP) server is inaccessible to the outside world (since it is not on the allowed list), we can check to see if they are running a safe and properly configured implementation of the FTP service, and then add the FTP service to the “allowed” list.
+A more realistic policy for an organization is: _internal users may connect to any service they like; external users may connect only to a carefully chosen list of public-facing services_.
 
-The default-allow policy is more convenient since, from a functionality point of view, everything stays working. However, from a security point of view, the default-allow policy is dangerous since it _fails-open_, meaning that if any mistake is made (if there is some service that is vulnerable but you forgot to add it to the “deny” list), the result is likely to be some form of an expensive security failure.
+### Default-Deny versus Default-Allow
 
-On the other hand, the default-deny policy _fails-closed_, meaning that if any mistake is made (if some service that is safe has been mistakenly omitted from the “allow” list), then the result is the loss of functionality or availability, but not a security breach. When operating at large scales, such errors of omission are likely to be common. Since errors of omission are a lot more dangerous in a default-allow policy than in a default-deny policy, and because the cost of a security failure is often a lot more than the cost of a loss of functionality, default-deny is usually a much safer bet.
+Once you have identified the services that should be externally reachable, you still need a rule for everything else. There are two fundamental philosophies:
 
-Another advantage of the default-deny policy is that when a system fails open (like in default-allow), you might never notice the failure, and since attackers who penetrate the system are unlikely to tell you that they have done so, security breaches may go undetected for long periods of time. This gets you into an arms race, wherein you have to keep up with all of the attacks that adversaries discover, and even stay ahead of them. This arms race is usually a losing proposition since there are a lot more of the attackers than there are defenders and the attacker only has to win once to make you extremely vulnerable. In contrast, when a system fails closed (like in default-deny), someone will probably notice the flaw and will likely complain that some service is not working; since the omission is immediately evident and easily correctable, failures in default-allow systems are much more costly than failures in default-deny systems.
+- **Default-allow (blacklist)**: Everything is permitted unless it has been explicitly forbidden. You start with a wide-open policy and add "deny" rules as you discover problems.
+- **Default-deny (whitelist)**: Everything is forbidden unless it has been explicitly permitted. You start with a "deny everything" rule and add narrow "allow" exceptions only for services that have been reviewed and approved.
 
-As such, a majority of well-implemented firewalls implement a default-deny system, wherein the security policy specifies a list of “allowed” services that external users are permitted to connect to, and all other services are forbidden. To determine whether a service should be removed from the allowed list, some kind of risk assessment and cost-benefit analysis is applied; if some service is too risky compared to its benefits, it is removed from the allowed list.
+**Default-deny is almost always the safer choice.** It _fails closed_: if you forget to allow a safe service, users complain and you fix it. The error produces a loss of functionality, not a security breach. Default-allow _fails open_: if you forget to block a dangerous service, the breach may go unnoticed for a long time because attackers have no incentive to tell you they succeeded.
 
-To identify network services, recall that TCP and UDP connections can be uniquely identified by the machine’s IP address and port number. Therefore, we can identify each network service with a triplet $$(m, r, p)$$, where $$m$$ is the IP address of a machine, $$r$$ is the protocol identifier (i.e. TCP or UDP), and $$p$$ is the port number. For instance, the company might have its official web server hosted on machine 1.2.3.4, and then (1.2.3.4, TCP, 80) would be added to the allowed list. In a default-deny policy, the list of network services that should be externally visible would be represented as a set of these triplets.
+At the scale of a university or company, errors of omission are inevitable. Default-deny turns those errors into visible complaints rather than silent compromises. It also forces a more deliberate risk-assessment process: every service that appears on the "allowed" list must justify its presence.
 
-## Enforcement: Stateful Packet Filters
+Sanity check: Suppose TRU accidentally leaves an old, unpatched FTP server reachable from the Internet under a default-allow policy. What happens? Under a default-deny policy? Which situation is easier for the security team to discover and remediate?
 
-The main idea behind enforcing security policies is to do so at a choke point in the network. The existence of a central choke point gives us a single place to monitor, where we can easily enforce a security policy on thousands of machines with minimal effort. This idea of a choke point is similar to that of physical security; at an airport, for example, all passengers are funneled through a security checkpoint where access can be controlled. It is easier to perform such checks at one, or a few, checkpoints rather than hundreds or even thousands of entrances.
+Answer: Under default-allow the server is reachable; an attacker can exploit it quietly and the team may never notice until data is stolen or the machine is used to attack others. Under default-deny the service is blocked; legitimate users who need it will complain loudly and quickly. The complaint is the signal that lets the team investigate whether the service is truly needed and whether it can be made safe.
 
-A stateful packet filter is a router that checks each packet against the provided access control policy. If the policy allows the packet, it is forwarded on towards its destination; if the policy denies the packet, then the packet is dropped and is not forwarded. The access control policy is usually specified as a list of rules; as the firewall processes each packet, it examines the rules one-by-one, and the first matching rule determines how the packet will be handled.
+Services are identified by the triplet (machine IP address, protocol TCP or UDP, port number). A typical allowed entry might be "anyone may open a TCP connection to port 443 on the public web server at 1.2.3.4."
 
-Typically, rules specify which connections are allowed. The rule can list the protocol (tcp or udp), the initiator’s IP address (the machine that initiated the connection), the initiator’s port number, the recipient’s IP address (the machine that the connection is directed to), and the recipient’s port number. A rule can use wildcards, denoted by the symbol $$*$$, for any of these. Each rule also specifies what action to take for matching connections; typical values might be ALLOW or DROP.
+## 3. Packet Filters: The Basic Enforcement Tool
 
-For example, take the following ruleset:  
-allow tcp $$* : *$$ $$\rightarrow$$ $$ 1.2.3.4:25$$  
-drop $$*$$ &nbsp; $$* : *$$ $$\rightarrow$$ $$* : *$$
+The power of a firewall comes from its position at a _choke point_. Just as airport security is far more effective when every passenger must pass through a small number of checkpoints, network security is far more effective when all traffic between the internal network and the outside world must pass through one (or a few) devices that can inspect and filter it.
 
-This ruleset allows anyone to open a TCP connection to port 25 on machine 1.2.3.4, but blocks all other connections.
+A **packet filter** is a router that has been augmented with an access-control list. For every packet that arrives, the filter compares the packet against its rules in order. The first rule that matches determines the fate of the packet: forward it toward its destination, or drop it silently.
 
-A stateful packet filter maintains state, meaning that it keeps track of all open connections that have been established. When a packet is processed, the filter allows the firewall to check whether the packet is part of a connection that is already open. If it is, then the packet can be forwarded. Without state, it is harder to know how to handle the packet; for example, if we see a packet that is going from X to Y, we don’t know if the packet was on a connection that was initiated by X or by Y, the answer to which might determine whether or not the packet is allowed to be forwarded. By keeping state, stateful packet filters allow policies that inspect the data, like for example, a policy that blocks any attempt to log into an FTP server with the username “root”. However, stateful packet filters must be written extremely carefully to ensure that it only keeps a small amount of information per connection to ensure that the firewall does not run out of memory.
+### Stateless Packet Filters
 
-## Enforcement: Other Firewalls
+A stateless packet filter looks only at the current packet's headers:
 
-_Stateless packet filters_ tend to operate on the network level and generally only look at TCP, UDP, and IP headers. In contrast to stateful packet filters, stateless packet filters do not keep any state, meaning that each packet is handled as it arrives, with no memory or history retained by the firewall.
+- Source IP address and port
+- Destination IP address and port
+- Protocol (TCP, UDP, ICMP, etc.)
+- Sometimes TCP flags (SYN, ACK, etc.)
 
-_Application-layer firewalls_ restrict traffic according to the content of the data fields. These types of firewalls have certain security advantages since they can enforce more restrictive security policies and can transform data on the fly.
+Rules use wildcards (`*`) for "any value." Classic examples (in a simplified syntax):
 
-Rather than simply inspecting traffic, we can also build firewalls that participate in application layer exchanges. For example, we can introduce a web proxy in a network and configure all local systems to use it for their web access. The local web browsers would then connect to the proxy rather than directly to remote web servers, and the proxy would in turn make the actual remote request. A major benefit of this design is that we can include monitoring in the proxy that has available for its decision-making all of the application-layer information associated with a given request and reply, so we can make fine-grained allow/deny decisions based on a wealth of information. This sort of design isn’t specific to web proxies but can be done for many different types of applications. The general term is an application proxy or gateway proxy. One difficulty with using this approach, however, is implementation complexity. The application proxy needs to understand all of the details of the application protocol that it mediates. Another potential issue concerns performance. If we bottleneck all of the site’s outbound traffic through just a few proxy systems, they may be overwhelmed by the load.
+```bash
+allow tcp 1.2.3.4:* -> 10.0.0.1:80
+allow tcp : -> 10.0.0.1:443
+deny  tcp : -> :
+```
 
-## Firewall Principles
+The last rule is a catch-all "default deny." Rules are evaluated top to bottom; order matters.
 
-In general, the mechanism that enforces an access control policy often takes the form of a reference monitor. The purpose of a reference monitor is to examine every request to access any controlled resource (an “object”) and determine whether that request should be allowed.
+**For readers new to networking**: Think of an IP address as a building address and a port as an apartment number inside that building. Well-known ports (0–1023) are conventionally used by standard services (80/443 for web, 25 for mail, 22 for SSH, 53 for DNS). Client programs usually pick a random high-numbered "ephemeral" port (>1023) for their side of the conversation.
 
-There are three security properties that any reference monitor should have:
+Stateless filters are simple and fast, and they remain the foundation of most real firewalls (Linux `iptables`/`nftables`, Cisco ACLs, etc.). They have, however, important limitations that motivate stateful filtering.
 
-- Unbypassable (also known as Always invoked): The reference monitor should be invoked on every operation that is controlled by the access control policy. There must be no way to bypass the reference monitor (i.e., the complete mediation property): all security-relevant operations must be mediated by the reference monitor.
-- Tamper-resistant: The reference monitor should be protected from tampering by other agents. For instance, other parties should not be able to modify its code or state. The integrity of the reference monitor must be maintained.
-- Verifiable: It should be possible to verify the correctness of the reference monitor, including that it actually does enforce the desired access control policy correctly. This usually requires that the reference monitor be extremely simple, as generally it is beyond the state of the art to verify the correctness of subsystems with any significant degree of complexity.
+### Limitations of Stateless Filtering
 
-We can recognize a firewall as an instance of a reference monitor. How are these three properties achieved?
+Servers listen on well-known ports. Clients use random high ports for their side of the conversation. If you want to allow a TRU student to visit an external website, you must allow outbound connections to port 80 or 443. The replies will come back to the student's random high port. A purely stateless filter has no memory that this particular high-port conversation was started by an internal host, so the only safe way to permit the reply is to open _all_ high ports to the world. That is obviously dangerous—any program on an internal machine could listen on a high port and receive unsolicited traffic.
 
-- Always invoked: We assumed that the packet filter is placed on a chokepoint link, with the property that all communications between the internal and external networks must traverse this link. Thus, the packet filter has an opportunity to inspect all such packets. Moreover, packets are not forwarded across this link unless the packet filter inspects them and forwards them (there needs to be no other mechanism by which packets might flow across this link). Of course, in some cases we discover that it doesn’t work out like we hoped. For instance, maybe a user hooks up an unsecured wireless access point to their internal machine. Then anyone who drives by with a wireless-enabled laptop effectively gains access to the internal network, bypassing the packet filter. This illustrates that, to use a firewall safely, we’d better be sure that our firewalls cover all of the links between the internal network and the external world. We term this set of links as the security perimeter.
-- Tamper-resistant: We haven’t really discussed how to make packet filters resistant to attack. However, they obviously should be hardened as much as possible, because they are a single point of failure. Fortunately, their desired functionality is relatively simple, so we should have a reasonable chance at protecting them from outside attack. For instance, they might not need to run a standard operating system, any user-level programs, or network services, eliminating many avenues of outside attack. More generally, we can use firewall protection for the firewall itself, and not allow any management access to the firewall device except from specific trusted machines. Of course, we must also ensure the physical security of the packet filter device.
-- Verifiable: In current practice, unfortunately the correctness of a firewall’s operation is generally not verified in any systematic fashion. The software is usually too complex for this to be feasible. And we do suffer as a result of our failure to verify packet filters: over time, there have been bugs that allowed attackers to defeat the intended security policy by sending unexpected packets that the packet filter doesn’t handle quite the way it should. In addition, experience has shown that firewall policies rapidly become complex. Thus, even if a firewall’s internal workings are entirely correct, the rules it enforces may not in fact accurately reflect the access controls that the operator believes they provide.
+Many protocols are even more awkward. The classic example is active-mode FTP:
 
-Finally, firewalls also embody _orthogonal security_ meaning that it can be deployed to protect pre-existing legacy systems much more easily than other security mechanisms that have to be integrated with the rest of the system. A reference monitor that filters the set of requests, dropping unallowed requests but allowing allowed requests to pass through unchanged, is essentially transparent to the rest of the system: other components do not need to be aware of the presence of the reference monitor.
+1. The client connects from a random port (say 2352) to the server's port 21 (control channel) and says "please send the file data to me on port 3573."
+2. The server acknowledges.
+3. The server then makes a new connection _from its port 20_ to the client's port 3573 (data channel).
 
-## Firewall Advantages
+A stateless filter that only saw the first packet would have no idea that a later inbound connection from port 20 to 3573 should be allowed. Opening all ports >1023 is the naive (and insecure) workaround.
 
-- Central control: A firewall provides a single point of control. When security policies change, only the firewall has to be updated; we do not have to touch individual machines. For instance, when a new threat to an Internet service is discovered, it is often possible to very quickly block it by modifying the firewall’s security policy slightly, and all internal machines benefit from this protection. This makes it easier to administer, control, and update the security policy for an entire organization.
-- Easy to deploy: Because firewalls are essentially transparent to internal hosts, there is an easy migration path, and they are easy to deploy (incrementally, or all at once). Because one firewall can protect thousands of machines, they provide a huge amount of leverage.
-- Solve an important problem: Firewalls address a burning problem. Security vulnerabilities in network services are rampant. In principle, a better response might be to clean up the quality of the code in our network services; but that is an enormous challenge, and firewalls are much cheaper.
+### Stateful Packet Filters
 
-## Firewall Disadvantages
+A **stateful** packet filter maintains a table of currently active connections (or at least enough information to recognize legitimate return traffic). When an internal host is allowed to open an outbound TCP connection, the firewall records the 5-tuple (source IP, source port, dest IP, dest port, protocol) and automatically permits the matching return packets until the connection closes or times out.
 
-- Loss of functionality: The very essence of the firewalls concept involves turning off functionality, and often users miss the disabled functionality. Some applications don’t work with firewalls. For instance, peer-to-peer networks have big problems: if both users are behind firewalls, then when one user tries to connect to another user, the second user’s firewall will see this as an inbound connection and will usually block it. The observation underlying firewalls is that connectivity begets risk, and firewalls are all about managing risk by reducing connectivity from the outside world to internal machines. It should be no surprise that reducing network connectivity can reduce the usefulness of the network.
-- The malicious insider problem: Firewalls make the assumption that insiders are trusted. This gives internal users the power to violate your security policy. Firewalls are usually used to establish a security perimeter between the inside and outside world. However, if a malicious party breaches that security perimeter in any way, or otherwise gains control of an inside machine, then the malicious party becomes trusted and can wreak havoc, because inside machines have unlimited power to attack other inside machines. For this reason, Bill Cheswick called firewalled networks a “crunchy outer coating, with a soft, chewy center.” There is nothing that the firewall can do once a bad guy gets inside the security perimeter. We see this in practice. For example, laptops have become a serious problem. People take their laptop on a trip with them, connect to the Internet from their hotel room (without any firewall), get infected with malware, then bring their laptop home and connect it to their company’s internal network, and the malware proceeds to infect other internal machines.
-- Adversarial applications: The previous two properties can combine in a particularly problematic way. Suppose that an application developer realizes their protocol is going to be blocked by their users’ firewalls. What do you think they are going to do? Often, what happens is that the application tunnels its traffic over HTTP (web, port 80) or SMTP (email, port 25). Many firewalls allow port 80 traffic, because the web is the “killer app” of the Internet, but now the firewall cannot distinguish between this application’s traffic and real web traffic.
+For the FTP example above, a stateful firewall that understands the FTP protocol can watch the control channel, see the `PORT` command, and _dynamically_ create a temporary rule that allows the expected data connection from the server. When the transfer finishes, the temporary rule is removed. This is far safer than leaving high ports open all the time.
 
-The fact that insiders are trusted has as a consequence that all applications that insiders execute will be trusted, too, and when such applications act in a way that subverts the security policy, the effectiveness of the firewall can be limited (even though the application developers probably do not think of themselves as malicious). The end result is that, over time, more and more traffic goes over ports nominally associated with other application protocols (particularly port 80, intended for web access), with firewalls gaining less and less visibility into the traffic that traverses them. As a result firewalls are becoming increasingly less effective.
+Stateful inspection also enables richer policies: "do not allow FTP logins with the username root," "rate-limit connections from any single external IP," etc. The cost is memory and CPU; the firewall must track state for every active connection without exhausting its resources. Careful engineering is required.
+
+Modern packet filters (iptables with conntrack, pf, etc.) are stateful by default for most traffic.
+
+Sanity check: Why can a stateful firewall safely allow "any outbound connection" while still protecting internal servers?  
+Answer: Because it only permits return traffic that exactly matches a connection that an internal host previously initiated. Unsolicited inbound packets that do not correspond to any tracked connection are dropped.
+
+## Application-Layer Firewalls and Proxies
+
+While stateless and stateful packet filters operate primarily at the network and transport layers (looking at IP addresses and TCP/UDP ports), **application-layer firewalls** restrict traffic based on the actual content of the application data fields.
+
+Rather than simply inspecting packets as they fly by, we can build firewalls that actively participate in application-layer exchanges using an **application proxy** (or gateway proxy). In this design, local systems are configured to connect _to the proxy_ rather than connecting directly to remote servers. The proxy receives the request, analyzes it, and then makes the actual remote request to the server on the user's behalf.
+
+This provides a major security benefit: the proxy has access to the full application-layer context (e.g., the specific URL requested, HTTP headers, or FTP commands) and can make fine-grained allow/deny decisions, or even safely transform data on the fly.
+
+However, application proxies have two significant drawbacks:
+
+- **Implementation Complexity**: The application proxy must deeply understand all of the intricate details of every application protocol that it mediates.
+- **Performance Bottlenecks**: Because the proxy acts as an active middleman that terminates and recreates connections, bottlenecking an entire site's outbound traffic through a few proxy systems can easily overwhelm them under heavy load.
+
+## Firewall Architectures and Topologies
+
+Packet-filtering logic (and more advanced controls) can be deployed in several classic arrangements. The progression from simplest to true defense-in-depth is worth understanding in detail; each step adds protection at the cost of complexity. Understanding the trade-offs is essential for designing a real network.
+
+### Bastion Hosts
+
+A **bastion host** is a machine that is directly exposed to the Internet and provides a public service (web, mail, VPN, DNS, etc.). It is the "lobby" of your building: visitors are expected to interact with it, but it should be extremely difficult for them to reach the offices upstairs.
+
+Because it is the most exposed machine, it must be treated with special care:
+
+- Keep the software load minimal. Every daemon is a potential vulnerability.
+- Assume it _will_ be compromised. Design the rest of the network on that assumption.
+- Disable ordinary user accounts. Normal users should never log into a bastion interactively.
+- Learn its normal behavior (CPU, memory, processes, traffic patterns) so anomalies stand out.
+- Watch for unexpected reboots or crashes—signs of possible compromise.
+- Maintain secure, versioned backups so that after a compromise you can rebuild cleanly and investigate what happened.
+
+### Screening Router
+
+The simplest topology: a single router with packet-filtering rules sits between the Internet and the internal LAN. This is what most home users have (the "firewall" built into their ISP-supplied router or their own Wi-Fi router). It is cheap and simple, but provides no defense in depth. If the router itself is compromised, the entire internal network is exposed.
+
+### Dual-Homed Host
+
+A bastion host is given two network interfaces: one connected to the Internet, one to the internal network. IP forwarding is disabled or heavily mediated by the host's own software. No packet can travel from the Internet to an internal machine without passing through the bastion's application logic. This allows for deep inspection (like the application proxies discussed earlier) but creates a single point of failure and a potential performance bottleneck.
+
+### Screened Host
+
+A screening router (packet filter) is placed in front of the internal network, but the bastion host(s) live on the _internal_ side. The router is configured to forward traffic to the bastion(s) only. Internal users reach external services by going through the bastion (for example, internal mail clients retrieve mail from a bastion mail server that talks to the outside world). This works well when the bastions do not need to handle enormous numbers of simultaneous connections.
+
+### Screened Subnet (DMZ) — The Gold Standard
+
+This is the architecture you will see in almost every serious organization.
+
+- An _exterior (access) router_ sits between the Internet and a special "perimeter" network (the DMZ).
+- One or more _bastion hosts_ live on the DMZ.
+- An _interior (choke) router_ sits between the DMZ and the true internal LAN.
+
+The exterior router performs relatively light filtering (it mostly protects the perimeter itself). The interior router is stricter: it protects the internal network both from the Internet _and_ from any bastion that has been compromised. Different rule sets apply on the two routers.
+
+Advantages:
+
+- Defense in depth. Compromising a bastion (expected) does not automatically give the attacker free rein inside.
+- Limits the damage from a compromised bastion: it can only snoop on or attack traffic that actually crosses the perimeter network.
+- Allows different policies for "services we must expose" versus "services internal users may use."
+
+Important rules of thumb (drawn from operational best practices):
+
+- It is fine to use multiple bastion hosts (separation of duties, load balancing, redundancy).
+- It is fine to use multiple exterior routers if you have multiple Internet uplinks.
+- It is fine, in some cases, to combine the exterior router with a bastion if the filtering role is minimal.
+- Do _not_ merge the interior router with a bastion host. Their security roles are different and not complementary.
+- Do _not_ deploy multiple interior routers. Internal traffic could be routed through the perimeter (where a compromised bastion could observe it) for performance or other reasons, defeating the purpose of the DMZ.
+- Do _not_ create "exceptions" that allow direct inbound connections from the Internet to internal hosts while claiming you have a screened subnet. Such exceptions are a common source of catastrophic breaches.
+
+Sanity check: Why is it especially dangerous to run a second interior router "for performance" even if it has the "right" rules?  
+Answer: Because a compromised bastion on the perimeter network can then observe (or tamper with) internal-to-internal traffic that would otherwise never have left the trusted LAN. The whole point of the DMZ is to confine the damage of a perimeter breach; leaking traffic back through the perimeter defeats that isolation.
+
+A properly designed screened subnet with bastions in the DMZ is almost always the appropriate choice for any organization larger than a very small office.
+
+### Personal Firewalls
+
+In addition to perimeter devices, modern operating systems include host-based ("personal") firewalls. These run on the endpoint itself and can enforce rules that are aware of which application is generating the traffic. They are a useful second layer, especially for laptops that travel outside the corporate perimeter, but they do not replace a well-designed network firewall architecture.
+
+## Advantages of Firewalls
+
+- Central control. When a new vulnerability is announced in some widely used service, you can often block access to it (or to the vulnerable versions) at the firewall in minutes, protecting every internal machine without touching them individually.
+- Leverage and ease of deployment. One device (or small set of devices) protects thousands of hosts. Adding the firewall is usually transparent to internal applications and users, so adoption can be incremental.
+- Orthogonal security. Firewalls protect existing systems without requiring changes to those systems' code. They are one of the few security mechanisms that work well against legacy software.
+
+## Disadvantages and Limitations
+
+- Loss of functionality. Connectivity creates risk; firewalls reduce connectivity. Some applications (especially peer-to-peer, gaming, and certain video-conferencing tools) become painful or impossible when both endpoints are behind restrictive firewalls.
+- The malicious-insider and "laptop problem". Firewalls draw a sharp line between "inside" (trusted) and "outside" (untrusted). Once an attacker crosses that line—by compromising a laptop that later returns to the office, by social-engineering an insider, or by exploiting a contractor's machine—the firewall can no longer help. Bill Cheswick famously described firewalled networks as having "a crunchy outer coating with a soft, chewy center."
+- Adversarial applications and tunneling. Application developers who want their software to work through firewalls often tunnel their traffic inside HTTP (port 80) or HTTPS (port 443)—ports that almost every firewall must allow. Once the traffic is encrypted, the firewall loses visibility into what is actually being done.
+- \*\*No protection against application-layer attacks. If your public web server has a SQL-injection vulnerability, the firewall will happily forward the malicious HTTP requests; it has no idea what the bytes mean at the application level.
+- Lack of authentication / IP spoofing. Packet filters decide based on claimed source IP addresses, which can be forged. A determined attacker on the Internet can send packets that appear to come from an internal address (unless ingress filtering is deployed on the upstream links to drop obviously forged packets). This is one reason stateful filters and higher-layer controls matter.
+- Misconfiguration risk. Large rule sets are programs. They contain bugs. They require the same engineering discipline (testing, review, version control) that we apply to any other critical software.
+
+## Circumventing Firewalls
+
+Because firewalls ultimately rely on port numbers and IP addresses as proxies for "what application is this and who is allowed to use it," they are inherently circumventable when those proxies are abused.
+
+- Port abuse: Port numbers are conventions, not technical enforcement mechanisms. Nothing prevents a BitTorrent client and server from agreeing to communicate on UDP port 53 (normally DNS) or on TCP port 80 (normally HTTP). If the firewall permits DNS or web traffic, it will permit the disguised traffic as well.
+- Relays and proxies: An internal user who can reach some unfiltered host on the Internet can run a small relay program there. The user sends innocuous-looking requests to the relay ("please forward this data to IP:port X"), and the relay forwards the real traffic. Detecting such relays is difficult.
+- Encryption and VPNs: End-to-end encryption hides both the content and, to a large extent, the true purpose of the communication. A user who establishes an outbound HTTPS connection to a relay outside can tunnel arbitrary traffic inside it.
+- Insider action: The ultimate circumvention is simply to carry a compromised laptop across the physical perimeter.
+
+These realities are why firewalls are only one layer in a defense-in-depth strategy. They must be complemented by host hardening, intrusion detection, logging and monitoring, endpoint protection, and, most importantly, good operational practices and a realistic understanding of the insider threat.

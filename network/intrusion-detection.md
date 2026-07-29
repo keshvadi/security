@@ -1,7 +1,7 @@
 ---
 title: Intrusion Detection
 parent: Network Security
-nav_order: 12
+nav_order: 14
 layout: page
 header-includes:
   - \pagenumbering{gobble}
@@ -9,140 +9,205 @@ header-includes:
 
 # Intrusion Detection
 
-In this class, we've talked about many ways to prevent attacks, but not all defenses are perfect, and attacks will often slip through our defenses. How do we detect these attacks when they happen?
+## Cheat sheet
 
-Imagine that you're managing a local network of computers (for example, all the web servers and employee computers in a company's office building). The local network is connected to the Internet with a router (recall that all requests from the local network to the wider Internet will pass through this router). How can we detect attacks on this network?
+- **Core Idea**: Perfect prevention is impossible. Even the best-designed systems will be attacked successfully at some point. Detection, response, and containment are therefore essential layers of defense in depth.
+- **Main Detector Placements**:
+  - **NIDS** (Network IDS): Sits at the choke point (router), sees all external traffic. Cheap and central, but must reconstruct TCP streams, faces evasion attacks, and is blind to encrypted (HTTPS) content without key escrow.
+  - **HIDS** (Host-based IDS): Runs on the endpoint itself (antivirus, system-call monitors, instrumented servers). Sees decrypted traffic and true semantics, but must be deployed everywhere and still faces parsing inconsistencies at the application or filesystem layer.
+  - **Logging**: Cheap post-facto evidence from existing server logs. Delayed, tamperable, cannot prevent damage in real time.
+  - **System-call / behavioral monitoring**: Watches for the _effects_ of compromise (reading `/etc/passwd`, calling `exec`, clearing history) rather than the attack string itself.
+- **Main Detection Strategies**:
+  - _Signature-based_ (blacklist known bad patterns) — excellent for known attacks, useless for novel ones.
+  - _Anomaly-based_ (learn "normal" with ML/stats) — can catch unknowns but training data and concept drift are hard.
+  - _Specification-based_ (manually write precise "normal" rules) — low FP if specs are good, extremely labor-intensive.
+  - _Behavioral_ (look for evidence of successful compromise or attacker actions) — high signal, can stop attacks in progress, independent of the exact exploit string.
 
-## Types of detectors
+---
 
-There are three broad types of detectors. The main difference in implementation is where on the network these detectors are installed. Each type of detector has its advantages and drawbacks.
+## Why We Need Detection
 
-## Types of detectors: Network Intrusion Detection System (NIDS)
+Throughout this book we have studied prevention: firewalls that block unwanted traffic, TLS that protects confidentiality and integrity, DNSSEC that authenticates responses, SSH that replaces plaintext remote login, and so on. These controls are valuable, but they are never perfect. Code has bugs, configurations drift, users make mistakes, insiders turn malicious, and novel attacks appear faster than patches can be written.
 
-A NIDS (network intrusion detection system) is installed between the router and the internal network. This means that all requests to and from the outside Internet must pass through the NIDS. The NIDS can see (and potentially modify) all packets sent to the outside Internet and received from the outside Internet.
+A prudent organization therefore assumes that prevention will eventually fail for _some_ attack, against _some_ asset, at _some_ time. When that happens we need three additional capabilities:
 
-The biggest advantage of a NIDS is that a single NIDS is enough to cover the entire network. There's no need to install anything on the end hosts (e.g. employee computers or web servers) because all their requests will pass through the NIDS anyway. Installing a single NIDS for the whole network is a cheap solution with low management overhead.
+- **Detection** — notice that something bad is (or was) happening.
+- **Response** — stop the bleeding and limit damage.
+- **Recovery / Containment** — restore service and remove the attacker's foothold.
 
-However, there are some drawbacks to using a NIDS. Recall that even though the Internet fundamentally works by sending packets, rich information communicated with higher-layer protocols are made up of multiple packets. For example, a single message sent through TCP may consist of many small packets that are combined to form a longer message. Also, packets may be dropped or sent out of order--it's the end hosts' responsibility to rearrange the pieces correctly with TCP.
+This topic focuses on the detection problem. The running example we will use is a public web server that is supposed to serve only files under `/public/files/`. An attacker who can trick it into serving `/etc/passwd` has achieved a serious information leak. We will see how different detectors try to notice this (or similar) attacks and why each approach has characteristic blind spots.
 
-A plain NIDS that just observes individual packets would not be too useful, because it will probably see a lot of packets with partial data out of order. The NIDS may also be seeing packets from lots of different TCP connections, since every connection from inside the network goes through the NIDS. A more useful NIDS would separate packets by their connection and correctly reorder the packets within each connection together by TCP sequence number. Once the NIDS has successfully reconstructed the connection, it can read the rich information and analyze it for attacks.
+## Network Intrusion Detection Systems (NIDS)
 
-To make matters worse, the TCP connection reconstructed at the NIDS may not match the TCP connection that the end host sees. Recall that each TCP packet has a time-to-live (TTL) field, which specifies how long the packet can be in transit before it expires. (This is often measured in the number of hops, i.e. the number of machines that the packet has been sent through.) Then there could be a scenario where the NIDS receives a TCP packet because the TTL has not yet expired, but by the time it's sent to the end host, the TTL has expired, and the end host discards the message. There could also be a scenario where the NIDS sees a packet, but it gets corrupted or dropped before it reaches the recipient. Thus the NIDS must also reason about packets that potentially don't reach the end host.
+A **NIDS** is placed on the link between the organization's border router and the internal network (or at other strategic choke points). In principle it can see every packet that enters or leaves the site.
 
-The possibility of inconsistent interpretations of messages between the NIDS and the end host can be exploited for attacks. Consider a NIDS that raises an alert for an attack if it encounters the string `/etc/passwd` in any request. An attacker could send a packet with the content `%65%74%63/%70%61%73%73%77%64`. To a basic NIDS doing string matching, this won't look like an attack, but if the end host is expecting a URL-encoded string and decodes this string, then the end host will receive the string `/etc/passwd`. The NIDS has failed to detect a potential password attack! This type of attack, where the attacker tries to obfuscate the contents of an attack, is called an _evasion attack_. The possibility of evasion attacks suggests that not only does the the NIDS have to reason about inconsistent information about connections, but the NIDS must also reason about how the end hosts may potentially interpret the information in the connection.
+### Advantages
 
-Another major issue with NIDS is the need to deal with encrypted traffic. Most modern web traffic is encrypted with HTTPS (TLS), which is end-to-end secure. In other words, the NIDS has no way to determine the contents of the messages being sent. To allow NIDS to analyze encrypted traffic, the network may need to be configured so that the end hosts give the NIDS their private keys to allow the NIDS to decrypt TLS connections. This might not always be a desirable solution, since it compromises the security of private keys and the security guarantees of NIDS, and it may allow network analysts to see sensitive information that only the end hosts should see.
+- One device protects thousands of hosts.
+- No changes required on end systems ("bolt-on" security for legacy code).
+- Central management and logging.
+- Can be implemented in the same hardware pipeline as a firewall, keeping cost low.
 
-## Types of detectors: Host-based Intrusion Detection System (HIDS)
+### Disadvantages and Evasion
 
-A HIDS (host-based intrusion detection system) is installed directly on the end hosts. For example, antivirus software might be considered a HIDS, because it is installed on the same computer that is generating and receiving network requests.
+The NIDS does not have the same view of traffic that the end host has. It must reconstruct TCP connections from individual packets (handling reordering, loss, and retransmission), yet the reconstruction may differ from what the server actually receives or processes.
 
-HIDS have much fewer inconsistency issues than NIDS. Since the HIDS is located on the same machine that is receiving and interpreting the requests, it can directly check what data is received and how the data is being parsed. HTTPS connections are also no longer an issue, because the HIDS can view the decrypted traffic at the end host.
+**Classic evasion example — path traversal with encoding**:
+A naïve NIDS that simply greps for the string `../` or `/etc/passwd` in HTTP requests will miss:
 
-However, these advantages don't come for free. Unlike NIDS, where a single implementation can defend against the entire network, a HIDS must be installed for every machine on the network. This can be very costly, especially if different machines need differently-configured HIDS.
+- `profile=%2e%2e%2fetc%2fpasswd` (URL-encoded `../etc/passwd`)
+- `profile=..%2f..%2fetc%2fpasswd` or `..%252f` (double encoding)
+- `profile=/etc/./passwd` or `profile=/etc//passwd`
 
-HIDS also don't defend against all evasion attacks. For example, a web server might expect a filename input from the user and serve the matching file to the user. If the user inputs `evanbot.txt`, the server might check the `/public/files` directory and return the `/public/files/evanbot.txt` file to the user. An attacker could supply a malicious input like `../../etc/passwd`. In Unix, `..` says to go up one directory, so this input would allow the attacker to access the passwords file, even though it's located in a different directory on the server. This type of attack is called a _path traversal attack_. To fully defend against path traversal attacks, it is not enough for the the HIDS to understand the contents of the end request. The HIDS would also need to reason about how the underlying filesystem interprets the contents of the end request. This can lead to further parsing inconsistencies and evasion attacks.
+The web server (or its framework) will decode the request before passing the filename to the filesystem. The NIDS that never decoded, or decoded differently, misses the attack. This is an **evasion attack**.
 
-## Types of detectors: Logging
+**Encryption**:
+Modern traffic is HTTPS (TLS). The NIDS sees only ciphertext and the outer TCP/IP headers. Without the session keys it cannot inspect the HTTP request at all. Some organizations solve this by terminating TLS at a reverse proxy that shares keys with the NIDS, or by installing inspection certificates on all internal clients. Both approaches have serious drawbacks for privacy, performance, and security.
 
-A third approach to intrusion detection is logging. Most modern web servers generate logs with information such as what web requests have been made, what files have been accessed, and what applications have been run. We can analyze these logs for evidence of malicious behavior or attacks.
+**TCP/IP Stream and TTL tricks**:
+Packets can be crafted so the NIDS sees them (TTL high enough) but an intermediate router or the end host drops them. Attackers can also exploit ambiguities in how different operating systems handle overlapping TCP segments or out-of-order packets. If the NIDS and the target server reassemble the TCP stream differently, the NIDS and the server will disagree on what data was actually delivered, allowing the attack payload to slip through unflagged.
 
-Logging is similar to HIDS because both systems directly use information from the end host, avoiding many potential parsing inconsistencies and problems with encrypted traffic. However, like NIDS, logging may need to consider evasion attacks such as the path traversal attack, which requires smarter filesystem parsing and can lead to inconsistencies.
+Because of these problems, a production NIDS must contain a full TCP/IP stack plus application-layer parsers (HTTP, DNS, SMTP, etc.) and must reason about how each _particular_ end host would interpret the stream. That is a great deal of complexity.
 
-The biggest drawback to logging is that it cannot be done in real-time. By the time the log has been generated, the event that's being logged has already happened. This also means that if an attack has happened, a log-based system will only detect the attack after it has happened. This can be dangerous if the attack is immediately damaging. However, logs are still useful for detecting attacks after they've happened (better late than never).
+## Host-Based Intrusion Detection Systems (HIDS)
 
-In terms of cost, logging is usually cheap, because web servers already have built-in logging mechanisms. The only overhead is occasionally running an external script on those logs to search for evidence of attacks.
+A **HIDS** runs on the endpoint itself. Antivirus products, OSSEC, OS query monitors, and instrumented web-server modules are all examples.
 
-## False Positives and False Negatives
+### Advantages
 
-There are two ways a detector can go wrong. A _false negative_ occurs when an attack happens but the detector incorrectly reports that there is no attack. A _false positive_ occurs when there is no attack, but the detector incorrectly reports that there is an attack. As an example, consider a fire alarm system. A false negative occurs if there is a fire but the fire alarm does not go off. A false positive occurs if there is no fire, but the fire alarm goes off.
+- Sees traffic _after_ TLS decryption and _after_ the application has parsed it.
+- Has direct access to filesystem semantics, process state, and system-call arguments.
+- Can therefore detect path-traversal attacks that fool a NIDS (it can actually ask "would opening this filename reach `/etc/passwd`?").
+- Works for encrypted traffic with no extra effort.
 
-It's easy to build a detector with a 0% false negative rate. Just report that there is an attack every single time. Then there will never be a case where your detector incorrectly reports that there is no attack. Similarly, a detector that never reports an attack will have a 0% false positive rate. Clearly, both of these are pretty useless detectors. In the real world, different detectors will have different false negative rates and false positive rates, and part of designing a good detector is balancing the two error rates. In general, as one error rate decreases, the other error rate will increase. Intuitively, to get fewer false positives, you must alert less often, which means you will also incorrectly fail to alert more often (higher false negative rate). Similarly, to get fewer false negatives, you must alert more often, which means you will also incorrectly alert more often (higher false positive rate).
+### Disadvantages
 
-Suppose you have two detectors. Detector A has a false positive rate of 0.1% and a false negative rate of 2%. Meanwhile, Detector B has a false positive rate of 2% and a false negative rate of 0.1%. Which of these detectors is better? It depends on the cost of each type of error. Consider the fire alarm system--if the fire alarm gives you a false negative, then your building has burned down, but if the fire alarm gives you a false positive, then you've wasted an hour with the fire department. In this scenario, the false positive is probably less costly than the false negative, so you would probably prefer Detector B. In another scenario, a false positive might be more costly than a false negative, so you might prefer Detector A instead.
+- Must be installed, configured, and updated on every machine.
+- Different operating systems and applications need different HIDS logic.
+- Still not perfect: the HIDS must understand the _application's_ idea of "normal" (e.g., a web server may legitimately read many files; distinguishing a traversal from a normal request may require deep knowledge of that specific application).
+- Can consume CPU, memory, and disk on production systems.
 
-The quality of your detector also depends on the rate of attacks. Consider Detector A again. If we receive 1,000 requests a day and 5 of them are attacks, then the expected number of false positives is 0.1% $$\times$$ 995 $$\approx$$ 1 request per day. (995 requests are not attacks, and out of the non-attacks, 0.1% of them will incorrectly be reported as an attack.) However, now suppose we receive 10,000,000 (10 million) requests a day and 5 of them are attacks. Now the expected number of false positives is 0.1% $$\times$$ 9,999,995 $$\approx$$ 10,000 requests per day. Note that nothing has changed about the detector. The only thing that changed was the number of requests received per day (and thus the rate of attacks). However, in the second scenario, our detector is much less useful, because we have to handle 10,000 false positives every day. This example shows that accurate detection is very challenging when the rate of attacks is extremely low, because even a very good detector will flag so many false positives that it becomes impractical to manually review every single false positive. For more information on this phenomenon, read about the [base rate fallacy](https://en.wikipedia.org/wiki/Base_rate_fallacy).
+## Logging as a Detection Mechanism
 
-## Detection strategies
+Most servers already produce logs: web access logs, authentication logs, application logs, `syslog`, etc. A simple detector can be a nightly (or real-time) script that scans those logs for suspicious patterns.
 
-So far, we've talked about how detectors are installed and how to measure their effectiveness, but we haven't talked about how the detector actually analyzes network traffic to detect an attack. There are four main strategies for detecting an attack, each with their benefits and drawbacks.
+### Advantages
 
-## Detection strategies: Signature-based detection
+- Extremely cheap — the logging code is already there.
+- No performance impact on the NIDS or the need to instrument every binary.
+- Provides forensic evidence after the fact ("who was logged in when the password file was read?").
 
-**The idea**: Look for activity that matches the structure of a known attack.
+### Disadvantages
 
-Signature-based detection can be thought of as _blacklisting_--we maintain a list of patterns that are not allowed, and we detect if we see something in the list of disallowed patterns.
+- Detection is delayed. By the time the log is examined the attacker may already have used the stolen passwords to log in and install a backdoor.
+- Logs can be tampered with by a successful attacker (clearing `/var/log/`, editing `lastlog`, etc.).
+- Still requires the same semantic understanding as a HIDS to avoid being fooled by evasion in the logged events.
 
-**Example**: We know that inputting some garbage bytes, followed by a memory address, followed by shellcode is the structure of a buffer overflow attack, so the detector can search for strings that match this pattern and classify them as attacks.
+## Monitoring System Calls and Behavioral Evidence
 
-Pros:
+Instead of looking at the _input_ the attacker sends, we can look at the _effects_ the attacker produces once code is running.
 
-- Detecting known signatures is easy.
+Example: a C program is never supposed to call `execve("/bin/sh", ...)`. A detector that watches system calls can notice the call and raise an alert (or even kill the process) regardless of how the attacker got the shellcode there—buffer overflow, format string, ROP, etc.
 
-- It's very good at detecting known attacks. Over time, the security community has built up huge shared libraries of attacks with known signatures.
+Other behavioral signals:
 
-Cons:
+- A web server process suddenly reading `/etc/passwd` or `/etc/shadow`.
+- A user process clearing its shell history (`unset HISTFILE`, `echo > ~/.bash_history`).
+- Unexpected outgoing connections, new listening sockets, or privilege-escalation syscalls.
 
-- It won't catch new attacks without known signatures.
+**Advantages**: High signal-to-noise (successful compromise is rarer than attack _attempts_), works across many exploit variants, can sometimes stop the attack in progress.
 
-- It might not catch variants of known attacks if the variant is different enough that the signature no longer matches. If the signature detector is too simple, it's easy to modify the attack slightly to circumvent the detector.
+**Disadvantages**: The attack has already begun; volume of system-call events is huge; legitimate programs sometimes do "suspicious" things (cron jobs reading password files, developers running `su`, etc.); false positives are easy if the policy is too broad.
 
-## Detection strategies: Anomaly-based detection
+## Comparing the Approaches
 
-**The idea**: Develop a model of what normal activity looks like. Flag any activity that deviates from normal activity.
+| Aspect                          | NIDS                            | HIDS / System-call monitor         | Logging                        |
+| ------------------------------- | ------------------------------- | ---------------------------------- | ------------------------------ |
+| Deployment cost                 | Low (one or few devices)        | High (every host)                  | Very low (already present)     |
+| Encrypted traffic               | Blind without key sharing       | Sees plaintext at endpoint         | Sees whatever the app logs     |
+| Evasion difficulty              | High (many TCP/encoding tricks) | Lower (sees real semantics)        | Medium                         |
+| Real-time prevention            | Possible (can kill connections) | Possible (can kill processes)      | No (post-facto)                |
+| Visibility into non-net attacks | None                            | Good (local malware, insiders)     | Depends on what is logged      |
+| Subversion risk                 | Attacker must compromise NIDS   | Attacker must compromise each host | Attacker can edit logs on host |
 
-Anomaly-based detection can be thought of _whitelisting_--we maintain a list of normal patterns that are allowed, and we detect if we see something that is _not_ in the list of allowed patterns.
+Real organizations use _all_ of them in combination.
 
-**Example**: A C program expects user input. Most user input consists of letters, numbers, and symbols--things you would expect a user to type on a keyboard. We determine that normal activity is any input that can be typed on a keyboard, and flag any input that cannot be typed on a keyboard. If an attacker tries to input a buffer overflow attack with memory addresses and shellcode (raw bytes that often can't be typed on a keyboard), we detect that this doesn't match normal behavior and flag it as an attack.
+## False Positives, False Negatives, and Why Scale Matters
 
-Pros:
+A **false negative** (FN) is a missed attack. A **false positive** (FP) is an alarm on benign activity.
 
-- It can catch new attacks that have never been seen before.
+It is trivial to build a detector with 0% FN: "always raise an alarm." It is equally trivial to build one with 0% FP: "never raise an alarm." Both are useless.
 
-Cons:
+Any useful detector lives on a curve: improving one metric usually worsens the other. The right operating point depends on the _cost_ of each kind of error in your environment.
 
-- Defining normal behavior is difficult. What if you train a model for normal behavior on training data that includes attacks?
+Even more important is the **base rate** — the fraction of events that are actually attacks. Suppose a detector has a 0.1% FP rate and a 2% FN rate.
 
-- A poor model might classify lots of attacks as normal, or classify lots of normal requests as attacks.
+- If you receive 1,000 web requests per day and 5 are attacks, you expect roughly 1 false positive per day (0.1% of 995 benign requests).
+- If you receive 10,000,000 requests per day and still only 5 attacks, you expect roughly 10,000 false positives per day.
 
-In general, anomaly-based behavior is mostly studied in academic papers but not widely deployed as a detection strategy.
+The detector has not changed; the environment has. At Internet or campus scale, even an excellent detector can flood analysts with alerts. This is the **base-rate fallacy** in action. Real detection systems therefore invest heavily in _tuning_, _prioritization_, _aggregation_, and _automated response_ so that human analysts only ever see the highest-confidence, highest-impact events.
 
-## Detection strategies: Specification-based detection
+**Sanity check**: A TRU network carries 50 million HTTP requests on a typical weekday; a handful are malicious. A signature-based NIDS with a 0.01% FP rate will still produce thousands of alerts per day. Why is this not a reason to abandon detection entirely?  
+**Answer**: Because the goal is not "zero alerts." The goal is to surface the _real_ attacks with high enough priority and low enough volume that the security team can actually investigate and respond before damage compounds. Tuning, whitelisting known-good traffic, behavioral correlation, and automated playbooks all help turn an unmanageable firehose into actionable intelligence.
 
-**The idea**: Manually specify what normal activity looks like. Flag any activity that deviates from normal activity.
+## Four Fundamental Detection Strategies
 
-Specification-based detection is also a form of whitelisting. The main difference between specification-based detection and anomaly-based detection is that specification-based detection manually defines normal activity (instead of trying to learn a model for normal activity).
+To understand how these strategies differ, consider how each one might be used to catch a classic _buffer overflow attack_:
 
-**Example**: A C programmer writes a program that asks for the user's age as input. The programmer knows that ages are numerical and specifies that normal behavior is inputting a number. If an attacker tries to input a buffer overflow attack with memory addresses and shellcode (raw bytes that are not numbers), we detect that this doesn't match normal behavior and flag it as an attack.
+### Signature-Based (Blacklisting Known Bad)
 
-Pros:
+Maintain a database of known attack patterns ("if you ever see this exact sequence of bytes or this exact sequence of syscalls, raise an alert").
 
-- It can catch new attacks that have never been seen before.
+- Example: If an attack relies on a specific sequence of junk bytes followed by a known shellcode string, the detector can search for that exact byte pattern.
+- Pros: Easy to implement, extremely effective against the attacks that are already in the wild and shared by the community (Snort rules, YARA signatures, ClamAV, etc.).
+- Cons: Blind to zero-days and to any variant that differs enough to miss the signature. Attackers deliberately mutate their exploits (polymorphism, encoding, junk insertion) to evade signatures.
 
-- If the specification is well-defined, the false positive rate can be made very low.
+### Anomaly-Based (Learning "Normal")
 
-Cons:
+Build a statistical or machine-learning model of what legitimate traffic or behavior looks like, then flag statistically unlikely events.
 
-- It's very time-consuming to manually write specifications for every application.
+- Example: A C program expects a user's name as input. A trained model observes that normal activity consists entirely of printable keyboard characters. If an attacker attempts a buffer overflow using raw memory addresses and executable shellcode (non-printable characters), the model flags this as highly abnormal.
+- Pros: Can detect previously unseen attacks.
+- Cons: Requires high-quality training data that is free of attacks; models suffer from concept drift (normal behavior changes over semesters, after new software deployments, etc.); high FP rates are common when attacks are rare in the training set.
 
-## Detection strategies: Behavioral detection
+### Specification-Based (Manually Declaring "Normal")
 
-**The idea**: Look for evidence of compromise.
+A human writes precise rules that describe acceptable behavior for a particular program or protocol.
 
-Unlike the other three models, behavioral detection doesn't search for attack patterns in the input. Instead, behavior detection looks for malicious behavior that an attacker might try to perform. In other words, we are looking for the result of the exploit, not the contents of the exploit itself.
+- Example: A programmer writes a specification stating that a specific input field accepts only numerical digits (e.g., an age). If an attacker sends buffer overflow shellcode (raw bytes that are not numbers), it violates the specification and is blocked.
+- Pros: If the specification is accurate, FP rates can be driven extremely low; novel attacks are still caught.
+- Cons: Extremely labor-intensive to write and maintain specifications for every important program; specs can contain errors that become permanent false negatives.
 
-**Example**: A C programmer writes a program that never calls the `exec` function. If an attacker tries to input a buffer overflow attack with shellcode that calls the `exec` function to spawn a shell, we detect that the code has called `exec` and flag this behavior as an attack. Note that we did not analyze the attacker input. Instead, we analyzed the program behavior and noticed that it called the `exec` function, which is evidence that the program has been compromised.
+### Behavioral / "Evidence of Compromise"
 
-Pros:
+Do not try to recognize the attack _input_. Instead, look for the _consequences_ an attacker would produce after a successful exploit, or for actions that are characteristic of attackers (clearing history, installing a new SSH key, beaconing home, etc.).
 
-- It can catch new attacks that have never been seen before.
+- Example: A C program is designed never to call the `exec()` function. If a buffer overflow successfully hijacks control flow and attempts to spawn a shell, the detector notices the unauthorized `exec()` call and flags this behavior as an attack.
+- Pros: High signal, largely independent of the exploit vector and of the exact bytes the attacker sent.
+- Cons: The attack is only detected after it has started.
 
-- If the behavior rarely or never occurs in benign (non-attack) circumstances, the false positive rate can be made very low.
+## Honeypots and Deception
 
-- It can be cheap to implement.
+A **honeypot** is a system (or entire network) that has no production purpose. Any connection or login attempt is therefore, by definition, either a mistake or an attack.
 
-Cons:
+Honeypots can:
 
-- The attack is only detected after it's started, so there's no way to prevent the attack before it happens.
+- Give early warning that someone is scanning or targeting your organization.
+- Divert attackers away from real assets.
+- Allow defenders to study attacker tools, tactics, and procedures in a controlled environment.
+- Feed high-quality attack data back into signature and anomaly systems.
 
-- An attacker can try to avoid detection by using different behavior to execute their attack.
+**Challenges**: making the honeypot believable (attackers quickly learn to recognize obvious fakes), legal and ethical issues around monitoring, and the risk that a compromised honeypot becomes a launch pad for attacks on others.
+
+Modern "honeytokens" (fake credentials, fake database records, canary files) extend the same idea to data rather than whole machines.
+
+## ctical Takeaways
+
+- Deploy NIDS at the border and at sensitive internal boundaries, but do not rely on it alone.
+- Instrument critical servers with HIDS or at least detailed behavioral logging.
+- Keep logs long enough for meaningful forensics, protect them (remote syslog, append-only storage, WORM), and monitor for log tampering.
+- Combine signature, behavioral, and (where feasible) specification-based techniques.
+- Accept that some attacks will be detected only after the fact; have incident-response playbooks ready.
+- Tune aggressively and measure your real FP/FN rates against your actual traffic mix.
+- Consider low-interaction honeypots or honeytokens on high-value networks for early warning.
+- Remember the base-rate problem: detection at scale is as much an operations and data-science problem as a security problem.

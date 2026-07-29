@@ -1,339 +1,160 @@
 ---
-title: 33. DNSSEC
+title: DNSSEC
 parent: Network Security
-nav_order: 9
+nav_order: 11
 layout: page
-nav_exclude: true
 header-includes:
   - \pagenumbering{gobble}
 ---
 
-# 33. DNSSEC
+# DNSSEC: Cryptographic Authentication for DNS
 
-**DNSSEC** is an extension to regular DNS that provides integrity and authentication on all DNS messages sent. Sanity check: Why do we not care about the confidentiality of DNSSEC?[^1]
+## Cheat sheet
 
-## 33.1. Signing records
+- **Purpose**: Add integrity and authentication (but not confidentiality) to DNS responses so resolvers can detect tampering and forgery.
+- **Core Mechanism**: Each zone signs its records with private keys. Resolvers validate signatures using public keys obtained through a chain of trust anchored at the DNS root.
+- **Key Record Types**:
+  - **DNSKEY**: Public key used to verify signatures. Typically split into a **Key Signing Key (KSK)** and a **Zone Signing Key (ZSK)**.
+  - **RRSIG**: Signature over a resource record set (RRset).
+  - **DS**: Delegation Signer — a hash of a child zone's KSK, stored in the parent to establish the chain of trust.
+  - **NSEC / NSEC3**: Prove the _non-existence_ of a name (negative proof) without revealing the entire zone.
+- **Benefits**: Detects cache poisoning, on-path and off-path forgery, and some configuration errors. Does _not_ hide domain names from observers.
+- **Deployment Status (mid-2020s)**: All root and most TLDs are signed. A growing but still minority fraction of second-level domains are signed. Resolver-side validation is available but not universal (major public resolvers do validate; many ISP resolvers do not).
+- **Limitations**: Does not protect against every attack (e.g., authoritative server compromise, certain replay within TTL, or attacks on the signing ceremony itself). Operational complexity and key-rollover mistakes have caused real outages.
 
-We want every DNS record to have integrity and authenticity, and we want everyone to be able to verify the integrity and authenticity of records. Digital signatures are a good fit in this situation, because only someone with the private key can create signatures, and everyone can use the public key to verify signatures.
+---
 
-To ensure integrity and authenticity, let's have every name server generate a public/private key pair and sign every record it sends with its private key. When the name server receives a DNS request, it sends the records, along with a signature on the records and the public key, to the resolver. The resolver uses the public key to verify the signature on the records.
+## DNSSEC
 
-Because of the signatures, a network attacker (MITM, on-path, off-path) cannot tamper with the data or inject malicious data without being detected (integrity). Also, the resolver can cache the signatures and the public key, and check at any time that the records actually came from the name server (authenticity).
+The previous topic showed that classic DNS has no meaningful authentication or integrity protection. An attacker who can win a race (or who is on the path) can inject arbitrary records, and resolvers will happily cache and serve them. This breaks every higher-layer security assumption that depends on "when I look up the name, I get the real address".
 
-You might see a flaw in this design: what if a name server is malicious? Then the malicious name server could return valid signatures on malicious records. How do we modify our design to prevent this?
+DNSSEC (DNS Security Extensions) adds exactly the missing properties, i.e., _integrity_ and _authentication_, using digital signatures. It lets a resolver prove that:
 
-## 33.2. Delegating trust
+- The records it received for a name really came from the zone that is authoritative for that name.
+- The records have not been altered in transit.
+- A "no such name" (NXDOMAIN) answer is genuine and not a forgery.
 
-The main issue in our design so far is we lack a _trust anchor_. We want DNSSEC to defend against malicious name servers, so we cannot implicitly trust the name servers. However, if we don't trust anybody, then DNSSEC will never work (we'll never trust any records we get), so we must first choose a trust anchor, an entity that we implicitly trust. In DNSSEC, the root servers are the trust anchor: every computer automatically assumes that the root server is honest and uncompromised. In real life, this is a safe assumption, because the organizations overseeing the Internet hold painstakingly formal ceremonies to ensure that the root server is uncompromised. (If you're interested, you can [read more about the root signing ceremony here](https://www.cloudflare.com/dns/dnssec/root-signing-ceremony/).)
+It does _not_ provide confidentiality. DNS queries and the names in signed answers are still visible to observers. (Confidentiality is addressed by separate mechanisms: DNS over TLS / HTTPS and query-name minimization.)
 
-Given a trust anchor, we can now _delegate trust_ from the trust anchor to somebody else. If the root endorses Alice, then you can be sure that Alice is trusted as well, since you implicitly trust the root. Also, if Alice endorses Bob, then you can be sure that Bob is trusted, since you trust Alice. This trust delegation starting from the root is how DNSSEC delegates trust from the root to all legitimate name servers, while protecting against malicious name servers.
+Sanity check: Why do we deliberately _not_ try to hide the domain names themselves in DNSSEC?  
+Answer: Because the primary job of DNS is to publish public mapping information. Hiding the names would require every resolver to have a prior relationship with every zone (impossible at Internet scale). DNSSEC's goal is to make the _published_ data trustworthy, not secret.
 
-Consider two parties, root and Alice, who each have a public key and a private key. You trust root, because it is the trust anchor. The root can delegate trust to Alice by _signing Alice's public key_. The root's signature on Alice's public key effectively says that Alice's public key is trustworthy, and the root trusts any message signed by Alice using her corresponding private key.
+## The Basic Idea: Sign Every Record
 
-Now, when Alice signs a message, we can use Alice's public key to verify that the message was properly signed by Alice. Also, we know that Alice's public key is trusted, because the root has signed it, and we implicitly trust the root.
+The simplest mental model is:
 
-If Alice was malicious, then the root would not delegate trust to her by signing her public key, because we are trusting that the root is honest and uncompromised.
+1. Every zone generates public/private key pairs. In practice, to make key management easier, zones use **two** key pairs: a **Key Signing Key (KSK)** and a **Zone Signing Key (ZSK)**. The KSK is used only to sign the ZSK, while the ZSK is used to sign the actual zone records. This separation means a zone can frequently rotate its ZSK for security without needing to ask its parent zone to update the delegation records.
+2. For every resource record set (RRset) the zone publishes (all the A records for a name, all the MX records, etc.), the zone computes a digital signature over the RRset using its private ZSK.
+3. The signature is stored in a new record type: **RRSIG**.
+4. The public keys are published in **DNSKEY** records inside the same zone.
+5. A resolver that receives an answer also receives the RRSIG. It fetches the DNSKEY, verifies the signature, and accepts the data only if the signature is valid and was produced by a key that the resolver has reason to trust.
 
-We can apply this delegation idea to the entire DNS tree. Each name server will sign the public key of all its trusted children name servers. For example, root signs `.edu`'s public key. We trust root, and root signed `.edu`'s public key, so now we trust `.edu`. Next, `.edu` signs `berkeley.edu`'s public key. We trust `.edu`, and `.edu` signed `berkeley.edu`'s public key, so now we trust `berkeley.edu`.
+Because only the holder of the private key can create a valid RRSIG, a network attacker (on-path or off-path) cannot forge or modify records without invalidating the signature. Caching is safe because the signature itself can be cached and re-validated later.
 
-## 33.3. DNSSEC Intuition
+## Who Do You Trust? (Delegating Trust from the Root)
 
-With these ideas in mind, let's revisit the DNS query for `eecs.berkeley.edu` from earlier and convert it to a secure DNSSEC query. _The DNSSEC additions are italicized._
+If every zone simply signed its own data, we would still have the "who signs the signers" problem. A malicious authoritative server for `bank.com` could generate its own key, sign malicious records with it, and the resolver would have no way to know the key is not legitimate.
 
-<img src="{{ site.baseurl }}/assets/images/network/dns/dnsquery.png" alt="Diagram of a recursive DNS query, where your resolver queries the root
-nameserver first in query 1 and response 2, then the nameserver at the second level of the tree in query 3 and response 4, then a nameserver at the third level of the tree in query 5 and response 6" />
+DNSSEC solves this with **delegated trust** anchored at the **DNS root**.
 
-1. You to the root name server: Please tell me the IP address of `eecs.berkeley.edu`.
+### The Root as Trust Anchor
 
-2. Root server to you: I don't know, but I can redirect you to another name server with more information. This name server is responsible for the `.edu` zone. It has human-readable domain name `a.edu-servers.net` and IP address `192.5.6.30`. _Here is a signature on the next name server's public key. If you trust me, then now you trust them too. Finally, here is my public key._
+Every validating resolver is pre-configured with the public key(s) of the DNS root zone (the "trust anchor"). The root is operated under extremely strict, transparent, and audited procedures (the famous root signing ceremonies that involve multiple people, smart cards, and physical security). Compromising the root is considered practically infeasible for all but the most powerful nation-state actors with sustained physical access.
 
-3. You to the `.edu` name server: Please tell me the IP address of `eecs.berkeley.edu`.
+### The Chain of Trust
 
-4. The `.edu` name server to you: I don't know, but I can redirect you to another name server with more information. This name server is responsible for the `berkeley.edu` zone. It has human-readable domain name `adns1.berkeley.edu` and IP address `128.32.136.3`. _Here is a signature on the next name server's public key. If you trust me, then now you trust them too. Finally, here is my public key._
+Trust flows downward:
 
-5. You to the `berkeley.edu` name server: Please tell me the IP address of `eecs.berkeley.edu`.
+- The root signs a **DS (Delegation Signer)** record for each signed TLD (e.g., `.com`, `.ca`). The DS record contains a hash of the TLD's KSK.
+- The TLD signs DS records for each signed second-level domain beneath it.
+- Each child signs its own ZSK with its KSK, signs its own data with the ZSK, and publishes its DNSKEYs.
 
-6. The `berkeley.edu` name server to you: OK, the IP address of `eecs.berkeley.edu` is `23.185.0.1`. _Finally, here is my public key and a signature on the answer._
+A resolver validating `www.bank.com` performs a "validation walk":
 
-Note that we implicitly trust all signed messages from the root, because the root is our trust anchor. In practice, all DNS resolvers have the root's public key hardcoded, and any messages verified with that hardcoded key are implicitly trusted.
+1. Start with the root trust anchor (known a priori).
+2. Fetch the root's DNSKEY and verify it against the trust anchor.
+3. Fetch the DS record for `.com` (signed by the root) and verify the signature using the root DNSKEY.
+4. Use the hash in the DS to verify that the `.com` KSK the resolver just fetched is the correct one.
+5. Repeat: fetch the DS for `bank.com` from `.com`, verify, obtain `bank.com`'s keys, verify the data for `www.bank.com`.
 
-Congratulations, you now have all the intuition for how DNSSEC works! The rest of this section shows how we implement this design in DNS.
+If any signature fails or a DS/DNSKEY hash does not match, the resolver treats the answer as _bogus_ and returns an error (usually SERVFAIL) to the application. The application never sees the forged data.
 
-## 33.4. New DNSSEC record types
+This creates a cryptographically verifiable chain from the root down to the leaf zone. No single compromised intermediate zone can forge data for a zone it does not control, because its DS record in the parent would not match the key it is using.
 
-To store cryptographic information in DNS messages, we need to introduce a few new record types.
+### Seeing DNSSEC in Action
 
-The **`DNSKEY` type record** encodes a public key.
+You can observe these records in practice using the `dig +dnssec <domain>` command-line utility. The `+dnssec` flag adds an `OPT PSEUDOSECTION` to the query with the `DO` (DNSSEC OK) bit set, telling the server to include cryptographic records in the response.
 
-The **`RRSIG` type record** is a signature on a set of multiple other records in the message, all of the same type. For example, if the authority section returns 13 `NS` type records, you can sign all 13 records at once with one `RRSIG` type record. However, to sign the 26 `A` type records in the additional section, you would need another `RRSIG` type record. In addition to the actual cryptographic signature, the `RRSIG` type record contains the type of the records being signed, the signature creation and expiration date, and the identity of the signer (information about which public key/`DNSKEY` record should be used to verify this signature).
-
-The **`DS` (Delegated Signer) type record** is a hash of the signer's name and a child's public key. The `DS` record, combined with a `RRSIG` record that signs the `DS` record, effectively allows each name server to sign the public key of its trusted children.
-
-All DNSSEC cryptographic records additionally include some (uninteresting) metadata, such as which algorithm was used for signing/verifying/hashing.
-
-You might have noticed that the number of additional records is always 1 more than the actual number of additional records that appear in the response. For example, consider the final query in our regular DNS query walkthrough:
-
-```shell
-$ dig +norecurse eecs.berkeley.edu @128.32.136.3
-
-;; Got answer:
-;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 52788
-;; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1
-
-;; QUESTION SECTION:
-;eecs.berkeley.edu.         IN   A
-
-;; ANSWER SECTION:
-eecs.berkeley.edu.  86400   IN   A   23.185.0.1
-```
-
-The response reports 1 additional record but shows no additional records at all. This extra record corresponds to the `OPT` pseudosection (seen just above the question section). This pseudosection allows extra space for DNSSEC-specific flags (e.g. the `DO` flag requests DNSSEC information), but in order to be backwards-compatible with regular DNS, the section is encoded as an additional record when sent in the request and the reply.
-
-## 33.5. Key Signing Keys and Zone Signing Keys
-
-There is one final complication in DNSSEC--what if a name server wants to change its key pair? A key change is necessary if, for example, an attacker steals the private key of a trusted name server, because now the attacker can impersonate a trusted name server.
-
-In our current DNSSEC design, a name server that wants to change keys must notify its parent name server so that the parent can change the DS record (which endorses the child's public key). As it turns out, this process is difficult to perform securely and can easily go wrong.
-
-To minimize the use of this difficult key change protocol, each DNSSEC name server generates two public/private key pairs. The **key signing key (KSK)** is only used to sign the zone signing key, and the **zone signing key (ZSK)** is used to sign everything else.
-
-<img src="{{ site.baseurl }}/assets/images/network/dnssec/zsk.png" alt="Diagram depicting a ZSK used to sign records" width="70%">
-
-In our previous design with one key pair, the name server sends (1) a set of records, (2) a signature on those records, and (3) the public key (endorsed by the parent). The DNS resolver uses the public key to verify the signature, and accepts the set of records.
-
-<img src="{{ site.baseurl }}/assets/images/network/dnssec/ksk.png" alt="Diagram depicting a KSK used to sign a ZSK, which is then used to sign records" width="70%">
-
-In our new design with two key pairs, the name server sends (1) the public ZSK, (2) a signature on the public ZSK, and (3) the public KSK (endorsed by the parent). The DNS resolver uses the public KSK to verify the signature, and accepts the public ZSK. Note that this is the exact same structure that was used to sign records before, but in this case, the record is the public ZSK, signed using the KSK.
-
-Another way to think about this step is to recall that a parent endorses a child by signing its public key. You can think of the KSK as the "parent" and the ZSK as the "child," both within one name server. The parent (KSK) endorses the child (ZSK) by signing the public ZSK.
-
-The result of this first step is that we now have a trusted public ZSK. The second step is the same as before: the name server sends a set of records, a signature on those records (using the private ZSK), and the public ZSK (endorsed by the KSK in the previous step).
-
-<img src="{{ site.baseurl }}/assets/images/network/dnssec/dnssec.png" alt="Diagram of the full chain of trust in DNSSEC. The trust anchor is the root's KSK, which is used to sign the root's ZSK, which is used to sign .edu's KSK, which is used to sign .edu's ZSK, which is used to sign berkeley.edu's KSK, which is used to sign berkeley.edu's ZSK, which is used to sign berkeley.edu's A record" width="70%">
-
-Here is a diagram of the entire two-key DNSSEC. Each color (blue, green, orange) represents a name server. The lighter shade represents records signed with the KSK. The darker shade represents records signed with the ZSK.
-
-Verification would proceed as follows.
-
-- Light blue: Because of our trust anchor, we trust the KSK of the root (1). The root's KSK signs its ZSK, so now we trust the root's ZSK (2-3).
-
-- Dark blue: We trust the root's ZSK. The root's ZSK signs `.edu`'s KSK (4-5), so now we trust `.edu`'s KSK.
-
-- Light green: We trust the `.edu`'s KSK (6). `.edu`'s KSK signs `.edu`'s ZSK, so now we trust `.edu`'s ZSK (7-8).
-
-- Dark green: We trust `.edu`'s ZSK. `.edu`'s ZSK signs `berkeley.edu`'s KSK (9-10), so now we trust `berkeley.edu`'s KSK.
-
-- Light orange: We trust the `berkeley.edu`'s KSK (11). `berkeley.edu`'s KSK signs `berkeley.edu`'s ZSK, so now we trust `berkeley.edu`'s ZSK (12-13).
-
-- Dark orange: We trust `berkeley.edu`'s ZSK. `berkeley.edu`'s ZSK signs the final answer record (14-15), so now we trust the final answer.
-
-## 33.6. DNSSEC query walkthrough
-
-Now we're ready to see a full DNSSEC query in action. As before, you can try this at home with the [`dig` utility](<https://en.wikipedia.org/wiki/Dig_(command)>)--remember to set the `+norecurse` flag so you can unravel the recursion yourself, and remember to set the `+dnssec` flag to enable DNSSEC.
-
-First, we query the root server for its public keys. Recall that the root's IP address, `198.41.0.4`, is publicly-known and hardcoded.
+For example, querying the `tru.ca` name server for its keys returns the public ZSK, the public KSK, and an RRSIG over both keys (signed by the KSK):
 
 ```shell
-$ dig +norecurse +dnssec DNSKEY . @198.41.0.4
-
-;; Got answer:
-;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 7149
-;; flags: qr aa; QUERY: 1, ANSWER: 3, AUTHORITY: 0, ADDITIONAL: 1
-
-;; OPT PSEUDOSECTION:
-; EDNS: version: 0, flags: do; udp: 1472
-;; QUESTION SECTION:
-;.             IN    DNSKEY
-
-;; ANSWER SECTION:
-.    172800    IN    DNSKEY    256 {ZSK of root}
-.    172800    IN    DNSKEY    257 {KSK of root}
-.    172800    IN    RRSIG     DNSKEY {signature on DNSKEY records}
-...
-```
-
-In this response, the root has returned its public ZSK, public KSK, and a `RRSIG` type record over the two `DNSKEY` type records. We can use the public KSK to verify the signature on the public ZSK.
-
-Because we implicitly trust the root's KSK (trust anchor), and the root's KSK signs its ZSK, we now trust the root's ZSK.
-
-Next, we query the root server for the IP address of `eecs.berkeley.edu`.
-
-```shell
-$ dig +norecurse +dnssec eecs.berkeley.edu @198.41.0.4
-
-;; Got answer:
-;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 5232
-;; flags: qr; QUERY: 1, ANSWER: 0, AUTHORITY: 15, ADDITIONAL: 27
-
-;; OPT PSEUDOSECTION:
-; EDNS: version: 0, flags: do; udp: 4096
-;; QUESTION SECTION:
-;eecs.berkeley.edu.           IN   A
-
-;; AUTHORITY SECTION:
-edu.                 172800   IN   NS      a.edu-servers.net.
-edu.                 172800   IN   NS      b.edu-servers.net.
-edu.                 172800   IN   NS      c.edu-servers.net.
-...
-edu.                 86400    IN   DS      {hash of .edu's KSK}
-edu.                 86400    IN   RRSIG   DS {signature on DS record}
-
-;; ADDITIONAL SECTION:
-a.edu-servers.net.   172800   IN   A       192.5.6.30
-b.edu-servers.net.   172800   IN   A       192.33.14.30
-c.edu-servers.net.   172800   IN   A       192.26.92.30
-...
-```
-
-DNSSEC doesn't remove any records compared to regular DNS--the question, answer (blank here), authority, and additional sections all contain the same records from regular DNS. However, DNSSEC adds a `DS` record and a `RRSIG` signature record on the `DS` record. Together, these two records sign the KSK of the `.edu` name server with the root's ZSK. Since we trust the root's ZSK (from the previous step), now we trust the `.edu` name server's KSK.
-
-Next, we query the `.edu` name server for its public keys.
-
-```shell
-$ dig +norecurse +dnssec DNSKEY edu. @192.5.6.30
-
-;; Got answer:
-;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 9776
-;; flags: qr aa; QUERY: 1, ANSWER: 3, AUTHORITY: 0, ADDITIONAL: 1
-
-;; OPT PSEUDOSECTION:
-; EDNS: version: 0, flags: do; udp: 4096
-;; QUESTION SECTION:
-;edu.          IN   DNSKEY
-
-;; ANSWER SECTION:
-edu.   86400   IN   DNSKEY  256 {ZSK of .edu}
-edu.   86400   IN   DNSKEY  257 {KSK of .edu}
-edu.   86400   IN   RRSIG   DNSKEY {signature on DNSKEY records}
-...
-```
-
-In this response, the `.edu` name server has returned its public ZSK, public KSK, and a `RRSIG` type record over the two `DNSKEY` type records. We can use the public KSK to verify the signature on the public ZSK.
-
-Because we trust the `.edu` name server's KSK (from the previous step), and the `.edu` KSK signs its ZSK, we now trust the `.edu` name server's ZSK.
-
-Next, we query the `.edu` name server for the IP address of `eecs.berkeley.edu`.
-
-```shell
-$ dig +norecurse +dnssec eecs.berkeley.edu @192.5.6.30
-
-;; Got answer:
-;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 60799
-;; flags: qr; QUERY: 1, ANSWER: 0, AUTHORITY: 5, ADDITIONAL: 5
-
-;; OPT PSEUDOSECTION:
-; EDNS: version: 0, flags: do; udp: 4096
-;; QUESTION SECTION:
-;eecs.berkeley.edu.          IN  A
-
-;; AUTHORITY SECTION:
-berkeley.edu.        172800  IN  NS     adns1.berkeley.edu.
-berkeley.edu.        172800  IN  NS     adns2.berkeley.edu.
-berkeley.edu.        172800  IN  NS     adns3.berkeley.edu.
-berkeley.edu.        86400   IN  DS     {hash of berkeley.edu's KSK}
-berkeley.edu.        86400   IN  RRSIG  DS {signature on DS record}
-
-;; ADDITIONAL SECTION:
-adns1.berkeley.edu.  172800  IN  A      128.32.136.3
-adns2.berkeley.edu.  172800  IN  A      128.32.136.14
-adns3.berkeley.edu.  172800  IN  A      192.107.102.142
-...
-```
-
-In this response, the `.edu` name server returns `NS` and `A` type records that tell us what name server to query next, just like in regular DNS.
-
-In addition, the response has a `DS` type record and an `RRSIG` signature on the `DS` record. Sanity check: which key is used to sign the `DS` record?[^2] Together, these two records sign the KSK of the `berkeley.edu` name server. Because we trust the `.edu` name server's ZSK (from the previous step), and the `.edu` ZSK signs the `berkeley.edu` KSK, we now trust the `berkeley.edu` name server's KSK.
-
-Next, we query the `berkeley.edu` name server for its public keys.
-
-```shell
-$ dig +norecurse +dnssec DNSKEY berkeley.edu @128.32.136.3
-
-;; Got answer:
-;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 4169
-;; flags: qr aa; QUERY: 1, ANSWER: 5, AUTHORITY: 0, ADDITIONAL: 1
+$ dig +norecurse +dnssec DNSKEY tru.ca @128.32.136.3
 
 ;; OPT PSEUDOSECTION:
 ; EDNS: version: 0, flags: do; udp: 1220
 ;; QUESTION SECTION:
-;berkeley.edu.         IN  DNSKEY
+;tru.ca.         IN  DNSKEY
 
 ;; ANSWER SECTION:
-berkeley.edu.  172800  IN  DNSKEY  256 {ZSK of berkeley.edu}
-berkeley.edu.  172800  IN  DNSKEY  257 {KSK of berkeley.edu}
-berkeley.edu.  172800  IN  RRSIG   DNSKEY {signature on DNSKEY records}
-...
+tru.ca.  172800  IN  DNSKEY  256 {ZSK of tru.ca}
+tru.ca.  172800  IN  DNSKEY  257 {KSK of tru.ca}
+tru.ca.  172800  IN  RRSIG   DNSKEY {signature on DNSKEY records}
 ```
 
-In this response, the `berkeley.edu` name server has returned its public ZSK, public KSK, and a `RRSIG` type record over the two `DNSKEY` type records. We can use the public KSK to verify the signature on the public ZSK.
+## Proving Non-Existence: NSEC and NSEC3
 
-Because we trust the `berkeley.edu` name server's KSK (from the previous step), and the `berkeley.edu` KSK signs its ZSK, we now trust the `berkeley.edu` name server's ZSK.
+A complete secure DNS must also be able to prove that a name _does not exist_ (or that a particular record type does not exist for a name). Without this, an attacker could simply suppress the real answer and claim "no such name".
 
-Finally, we query the `berkeley.edu` name server for the IP address of `eecs.berkeley.edu`.
+Why is this difficult? Because public-key cryptography is computationally slow, name servers cannot dynamically generate signatures on the fly for every randomly generated non-existent domain query (doing so would create a massive Denial-of-Service vulnerability). Instead, all signatures must be computed offline in advance. Since a server cannot pre-compute signatures for an infinite number of non-existent names, DNSSEC pre-computes signatures for the gaps between existing names.
 
-```shell
-$ dig +norecurse +dnssec eecs.berkeley.edu @128.32.136.3
+DNSSEC uses **NSEC** (or the privacy-preserving **NSEC3**) records. An NSEC record says, in effect: "There are no names between b.example.com and l.example.com in this zone." By returning the pre-signed NSEC record that alphabetically covers the queried non-existent name, the server proves that the name is genuinely absent without needing to compute a new signature online.
 
-;; Got answer:
-;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 21205
-;; flags: qr aa; QUERY: 1, ANSWER: 2, AUTHORITY: 0, ADDITIONAL: 1
+NSEC has a privacy side-effect: it reveals the entire list of names in the zone to anyone who asks for a non-existent name (zone walking). NSEC3 hashes the names and adds salt so that an attacker cannot easily enumerate the zone while still allowing resolvers to verify absence.
 
-;; OPT PSEUDOSECTION:
-; EDNS: version: 0, flags: do; udp: 1220
-;; QUESTION SECTION:
-;eecs.berkeley.edu.         IN  A
+## Real-World Deployment and Operational Reality
 
-;; ANSWER SECTION:
-eecs.berkeley.edu.  86400   IN  A      23.185.0.1
-eecs.berkeley.edu.  86400   IN  RRSIG  A {signature on A record}
-```
+As of the mid-2020s:
 
-This response has the final answer `A` type record and a signature on the final answer. Because we trust the `berkeley.edu` name server's ZSK (from the previous part), we also trust the final answer.
+- The root and virtually all TLDs are DNSSEC-signed.
+- Many large second-level domains (especially those run by security-conscious organizations, banks, and governments) are signed.
+- Overall signed domain percentage is still well below 50% for the general web, but growing steadily.
+- Major public resolvers (Google, Cloudflare, Quad9, etc.) perform DNSSEC validation by default. Many large ISPs do not, or do so only for a subset of customers.
 
-## 33.7. Nonexistent domains
+Operational gotchas that have caused real outages:
 
-Remember that DNS is designed to be fast and lightweight. However, public-key cryptography is slow, because it requires math. As a result, name servers that support DNSSEC sign records _offline_--records are signed ahead of time, and the signatures saved in the server along with the records. When the server receives a DNS query, it can immediately return the saved signature without computing it.
+- Forgetting to publish a new DS record in the parent when rolling the child's DNSKEY.
+- Letting signatures expire (RRSIGs have their own validity periods).
+- Misconfiguring NSEC3 parameters or key rollover timing.
+- "DNSSEC stripping" by middleboxes or misbehaving recursive resolvers that remove or ignore the AD (Authenticated Data) bit.
 
-Offline signing works fine for existing domains, but what if we receive a request for a nonexistent domain? There are infinitely many nonexistent domains, so we cannot sign them all offline. However, we cannot sign requests for nonexistent domains _online_ either, because this is too slow. Also, online cryptography makes name servers vulnerable to an attack. Sanity check: what's the attack?[^3]
+DNSSEC, like any cryptographic system, requires careful key management and monitoring. When done correctly, however, it eliminates an entire class of previously unfixable attacks.
 
-DNSSEC has a clever solution to this problem--instead of signing individual nonexistent domains, name servers pre-compute signatures on _ranges_ of nonexistent domains. Suppose we have a website with three subdomains:
+## What DNSSEC Does and Does Not Protect
 
-```shell
-b.example.com
-l.example.com
-q.example.com
-```
+**Protects**:
 
-If we sort every possible subdomain alphabetically, there are three ranges of nonexistent domains: everything between `b` and `l`, `l` and `q`, and `q` and `b` (wrapping around from z to a).
+- Integrity and authenticity of DNS data against network attackers (the original poisoning and Kaminsky-style attacks).
+- Negative answers (you really are at the right server, or the name really does not exist).
+- Some accidental misconfigurations (a mis-typed delegation will fail validation).
 
-Now, if someone queries for `c.example.com`, instead of signing a message proving the nonexistence of that specific domain, the name server returns a **NSEC record** saying, "No domains exist between `b.example.com` and `l.example.com`. Signed, name server."
+**Does not protect**:
 
-NSEC records have a slight vulnerability - notice that every time we query for a nonexistent domain, we can discover two valid domains that we might have otherwise not known. By traversing the alphabet, an attacker can now learn the names of every subdomain of the website:
+- Confidentiality of queries or answers (use DoH/DoT for that).
+- Availability (an attacker can still drop packets or flood the resolver).
+- Compromise of the authoritative server or its signing keys (if the zone's private key is stolen, the attacker can sign anything until the DS is updated in the parent).
+- The root or TLD operators themselves (the trust anchor assumption).
 
-1. Query `c.example.com`. Receive NSEC saying nothing exists between `b` and `l`. Attacker now knows `b` and `l` exist.
+DNSSEC is therefore a powerful but partial defense. It is most effective when combined with encrypted transport for the stub-to-recursive leg and with application-layer protections (TLS + certificate transparency).
 
-2. Query `m.example.com`. Receive NSEC saying nothing exists between `l` and `q`. Attacker now knows `q` exists.
+## DNSSEC in Practice
 
-3. Query `r.example.com`. Receive NSEC saying nothing exists between `q` and `b`. Attacker has already seen `b`, so they know they have walked the entire alphabet successfully.
+DNSSEC is a beautiful example of "designing for the long term". The protocol was standardized in the late 1990s and early 2000s, but only became widely deployable after more than a decade of operational experience, tool improvements, and the painful lessons of large-scale outages caused by key-rollover mistakes.
 
-Some argue that this is not really a vulnerability, because hiding a domain name like `admin.example.com` is relying on security through obscurity. Nevertheless, an attempt to fix this was implemented as **NSEC3**, which simply uses the hashes of every domain name instead of the actual domain name.
+The key insights that transfer to other systems are:
 
-```shell
-372fbe338b9f3bb6f857352bc4c6a49721d6066f (l.example.com)
-6898bc7daf3054daae05e8763153ee1506e809d5 (q.example.com)
-f96a6ec2fb6efbe43002f4cbf124f90879424d79 (b.example.com)
-```
+- **Authentication without confidentiality is sometimes exactly what you need.** DNS must be public; hiding the data would break the service. Signatures give you the security property you actually require without forcing a new architecture.
+- **Delegation of trust must be explicit and verifiable.** The DS record is the technical embodiment of "I, the parent, vouch for this child's key." Without the DS link, the chain is broken.
+- **Negative proofs are hard.** Proving that something does _not_ exist without revealing everything else is a recurring challenge (see also certificate revocation, non-membership in sets, etc.). NSEC/NSEC3 is one elegant solution.
+- **Cryptography is easy; key management is hard.** The outages in DNSSEC have almost never been due to broken crypto. They have been due to humans forgetting to publish a DS, letting a signature expire, or mismanaging the rollover of a key that is used by millions of resolvers.
 
-The order of the domain names has changed, but the process is the same - if someone queries for `c.example.com`, which hashes to `8dca64e4b6e1724f0d84c5c25c9354d5529ab0a2`, the NSEC3 record will say, "No domains exist that hash to values between `6898b...` and `f96a6...`. Signed, name server."
-
-Of course, an attacker could buy a GPU and precompute hashes to learn domain names anyway... and [NSEC5](https://datatracker.ietf.org/doc/draft-vcelak-nsec5/) was born. Fortunately, it's still out of scope for this class.
-
-## Sample Exam Questions
-
-Here we've compiled a list of Sample Exam Questions that cover DNSSEC.
-
-- [Spring 2024 Final Question 8: Check Please](https://assets.cs161.org/exams/sp24/sp24final.pdf#page=17)
-
-[^1]: A: DNS responses don't contain sensitive data. Anyone could query the name servers for the same information.
-[^2]: A: The ZSK of the `.edu` name server.
-[^3]: A: Denial of service (DoS). Flood the name server with requests for nonexistent domains, and it will be forced to sign all of them.
+For the student, the practical takeaway is simple: turn on DNSSEC validation wherever you control a resolver, sign your own zones if you operate authoritative servers, and treat any DNS answer that fails validation as a serious security event rather than "just another SERVFAIL."

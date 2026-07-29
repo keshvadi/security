@@ -12,51 +12,101 @@ output:
 
 # Cookies and Session Management
 
-HTTP is a stateless protocol, which means each request and response is independent from all other requests and responses. However, many features on the web require maintaining some form of state. For example, when you log into your email account, you can stay logged in across many requests and responses. If you enable dark mode on a website and make subsequent requests to the website, you want the pages returned to have a dark background. If you're browsing an online shopping website, you want the items in your cart to be saved across many requests and responses. Browser and servers store HTTP cookies to support these features.
+## What Are Cookies?
 
-At a high level, you can think of cookies as pieces of data stored in your browser. When you make a request to enable dark mode or add an item to your shopping cart, the server sends a response with a `Set-Cookie` header, which tells your browser to store a new cookie. These cookies encode state that should persist across multiple requests and responses, such as your dark mode preference or a list of items in your shopping cart. In future requests, your browser will automatically attach the relevant cookies to a request and send it to the web server. The additional information in these cookies helps the web server customize its response.
+HTTP is a **stateless protocol**. This means that every request a browser sends to a web server is completely independent of every other request. The server does not automatically remember who the user is or what they did in previous interactions. While this design makes HTTP simple and highly scalable, it creates a major challenge for real-world web applications. Users expect websites to remember information across multiple page loads and visits, whether they are logged in, what items are in their shopping cart, their dark mode preference, partially completed forms, or language and region settings. Without some way to maintain state, every page refresh or link click would cause the website to forget everything about the user. **HTTP cookies** were introduced specifically to solve this problem.
 
-## 1. Cookie Attributes
+At a high level, you can think of cookies as small pieces of data that a web server asks the browser to store on the user’s device.
+When you visit a website, the server can include a `Set-Cookie` header in its HTTP response. The browser stores the cookie (a name-value pair together with various attributes). On all subsequent requests to the same website (or matching domain and path), the browser automatically attaches the cookie in the `Cookie` header. This simple mechanism allows the server to recognize returning users and customize its responses accordingly.
 
-Every cookie is a name-value pair. For example, a cookie `darkmode=true` has name `darkmode` and value `true`.
+For example, after a successful login a server might set a session cookie like this:
 
-For security and functionality reasons, we don't want the browser to send every cookie in every request. A user might want to enable dark mode on one website but not on another website, so we need a way to only send certain cookies to certain URLs. Also, as we'll see later, cookies may contain sensitive login information, so sending all cookies in all requests poses a security risk. These additional cookie attributes help the browser determine which cookies should be attached to each request.
+```http
+Set-Cookie: session=abc123xyz; Path=/; Secure; HttpOnly; SameSite=Lax
+```
 
-- The `Domain` and `Path` attributes tell the browser which URLs to send the cookie to. See the next section for more details.
-- The `Secure` attribute tells the browser to only send the cookie over a secure HTTPS connection.
-- The `HttpOnly` attribute prevents JavaScript from accessing and modifying the cookie.
-- The `expires` field tells the browser when to stop remembering the cookie.
+The browser will then automatically include it in future requests:
 
-## 2. Cookie Policy: Domain and Path
+```http
+Cookie: session=abc123xyz
+```
 
-The browser sends a cookie to a given URL if the cookie's `Domain` attribute is a domain-suffix of the URL domain, and the cookie's `Path` attribute is a prefix of the URL path. In other words, the URL domain should end in the cookie's `Domain` attribute, and the URL path should begin with the cookie's `Path` attribute.
+## Cookie Attributes and Security Best Practices
 
-For example, a cookie with <code>Domain=<span style="color:red">example.com</span></code> and <code>Path=<span style="color:green">/some/path</span></code> will be included on a request to <code>http://foo.<span style="color:red">example.com</span><span style="color:green">/some/path</span>/index.html</code>, because the URL domain ends in the cookie domain, and the URL path begins with the cookie path.
+Cookie attributes are powerful settings that control how cookies behave. They determine the cookie’s scope, lifetime, and security properties. While we will explore attacks such as Cross-Site Scripting (XSS) and Cross-Site Request Forgery (CSRF) in detail in later sections, it is important to understand now how proper cookie configuration can protect against them.
 
-Note that cookie policy uses a different set of rules than the same origin policy. This has caused problems in the past. {% comment %} Nick wrote: "has caused problems in the path." typo? -peyrin {% endcomment %}
+The most important cookie attributes and their recommended security settings are summarized below:
 
-## 3. Cookie Policy: Setting Domain and Path
+| Attribute  | Purpose                                | Security Benefit               | Example                     | What the example means                                                                    |
+| ---------- | -------------------------------------- | ------------------------------ | --------------------------- | ----------------------------------------------------------------------------------------- |
+| Name/Value | The actual data being stored           | —                              | `sessionid=abc123def456...` | A unique, random session identifier                                                       |
+| Domain     | Which domains receive the cookie       | Reduces attack surface         | `Domain=example.com`        | Cookie is sent to example.com and all its subdomains                                      |
+| Path       | Which paths receive the cookie         | Reduces attack surface         | `Path=/`                    | Cookie is sent to every page on the site                                                  |
+| Secure     | Only send over HTTPS                   | Prevents network eavesdropping | `Secure`                    | Cookie is never sent over unencrypted HTTP connections                                    |
+| HttpOnly   | Block JavaScript access                | Protects against XSS theft     | `HttpOnly`                  | JavaScript cannot read or steal this cookie                                               |
+| SameSite   | Control when cookie is sent cross-site | Protects against CSRF          | `SameSite=Lax`              | Cookie is sent during normal navigation but blocked on most dangerous cross-site requests |
+| Max-Age    | How long the cookie lives              | Limits damage window if stolen | `Max-Age=86400`             | Cookie automatically expires after 24 hours                                               |
 
-For security reasons, we don't want a malicious website `evil.com` to be able to set a cookie with domain `bank.com`, since this would allow an attacker to affect the functionality of the legitimate bank website. To prevent this, the cookie policy specifies that when a server sets a cookie, the cookie's domain must be a URL suffix of the server's URL. In other words, for the cookie to be set, the server's URL must end in the cookie's `Domain` attribute. Otherwise, the browser will reject the cookie.
+**Example of a secure session cookie**:
 
-For example, a webpage with domain `eecs.berkeley.edu` can set a cookie with domain `eecs.berkeley.edu` or `berkeley.edu`, since the webpage domain ends in both of these domains.
+```http
+Set-Cookie: sessionid=abc123def456...; Max-Age=86400; Path=/; Secure; HttpOnly; SameSite=Lax
+```
 
-This policy has one exception: cookies cannot have domains set to a top-level domain, such as `.edu` or `.com`, since these are too broad and pose a security risk. If `evil.com` could set cookies with domain `.com`, the attacker would have the ability to affect all `.com` websites, since this cookie would be sent to all `.com` websites. The web browser maintains a list of top-level domains, which includes two-level TLDs like `.co.uk`.
+## Cookie Scoping Rules (Domain and Path)
 
-The cookie policy allows a server to set the `Path` attribute without any restrictions.[^1]
+The browser uses two attributes to decide which cookies to send with each request: `Domain` and `Path`.
 
-_Further reading:_ [Cookies](https://developer.mozilla.org/en-US/docs/Web/HTTP/Cookies)
+- **Domain** uses **suffix matching**: A cookie with `Domain=example.com` will be sent to `example.com` and any of its subdomains (`www.example.com`, `api.example.com`, etc.).
+- **Path** uses **prefix matching**: A cookie with `Path=/app` will be sent to any URL whose path starts with `/app` (e.g., `/app`, `/app/settings`, `/app/user/123`), but **not** to `/admin` or the root path `/`.
 
-## 4. Session Management
+These rules are more permissive than the Same-Origin Policy, which requires an exact match on scheme, host, and port.
 
-Cookies are often used to keep users logged in to a website over many requests and responses. When a user sends a login request with a valid username and password, the server will generate a new session token and send it to the user as a cookie. In future requests, the browser will attach the session token cookie and send it to the server. The server maintains a mapping of session tokens to users, so when it receives a request with a session token cookie, it can look up the corresponding user and customize its response accordingly.
+For security reasons, a website can **only set cookies for its own domain or parent domains**. For example, `shop.example.com` can set a cookie for `shop.example.com` or `example.com`, but it cannot set a cookie for `google.com` or `bank.com`.
 
-Secure session tokens should be random and unpredictable, so an attacker cannot guess someone else's session token and gain access to their account. Many servers also set the `HttpOnly` and `Secure` flags on session tokens to protect them from being accessed by XSS vulnerabilities or network attackers, respectively.
+Additionally, browsers forbid setting cookies on broad top-level domains (such as `.com`, `.org`, `.edu`, or two-level TLDs like `.co.uk`). Allowing this would let one malicious site affect every website ending in that TLD.
 
-It is easy to confuse session tokens and cookies. Session tokens are the values that the browser sends to the server to associate the request with a logged-in user. Cookies are how the browser stores and sends session tokens to the server. Cookies can also be used to save other state, as discussed earlier. In other words, session tokens are a special type of cookie that keep users logged in over many requests and responses.
+## Session Management with Cookies
 
-[^1]: The lack of restriction on the `Path` attribute has caused problems in the past, as cookies are presented to the server and JavaScript as an unordered set of name/value pairs, but is stored internally as name/path/value tuples, so if two cookies with the same name and host but different path are present, both will be presented to the server in unspecified order.
+One of the most important uses of cookies is **session management**, i.e., keeping users logged in across multiple requests and page visits.
+The process typically works as follows.
 
-## 20.5 Cookie Policy versus Same-Origin Policy
+1. User enters username and password on the login page.
+2. Server verifies the credentials.
+3. If valid, the server generates a random, unpredictable session token.
+4. The server stores the mapping: `session_token → user_id` (usually in a database or cache).
+5. The server sends the session token to the browser in a `Set-Cookie` header.
+6. On every future request, the browser automatically sends the session token cookie.
+7. The server looks up the token and knows which user is making the request.
 
-Cookie polices and the same-origin policies have subtle differences. For example, it is possible for two different origins to share cookies. If a cookie is set for domain `berkeley.edu`, then `eecs.berkeley.edu` and `auth.berkeley.edu` can both read and write that cookie, even if they do not have the same origin. This can be used by an attacker: lets say an attacker controls `eecs.berkeley.edu`. They can then set a cookie for `berkeley.edu`, which will be sent to `auth.berkeley.edu` requests by the browser.
+Because cookies are automatically sent by the browser, they must be handled with care. Poorly configured cookies can lead to serious vulnerabilities including session hijacking, CSRF, and XSS data theft.
+
+**Key Best Practices**:
+
+- Always use `HttpOnly` and `Secure` on session cookies.
+- Use `SameSite=Lax` (or `Strict`) by default.
+- Generate session tokens using cryptographically secure randomness.
+- Set reasonable expiration times.
+- Scope cookies as narrowly as possible (`Domain` and `Path`).
+- Prefer modern session management libraries and frameworks that handle these details correctly.
+
+## Cookies vs. Same-Origin Policy
+
+It is important to understand that Cookie Policy and the Same-Origin Policy are different mechanisms that solve different problems:
+
+- Same-Origin Policy protects the browser’s internal state (DOM access, `localStorage`, JavaScript execution context).
+- Cookie Policy controls which cookies are automatically sent with HTTP requests.
+
+Because of this difference, it is possible for two different origins to share cookies. For example, if a cookie is set with `Domain=tru.ca`, then both `eng.tru.ca` and `cs.tru.ca` can read and write it, even though they are different origins under the Same-Origin Policy.
+
+This is why the `SameSite` attribute was introduced, to give developers more control over when cookies are sent across origins.
+
+### Quick Comparison
+
+| Aspect          | Same-Origin Policy                                          | Cookie Policy                                                  |
+| --------------- | ----------------------------------------------------------- | -------------------------------------------------------------- |
+| Matching Rule   | Strict equality (scheme + host + port)                      | Suffix matching on Domain + prefix matching on Path            |
+| Path matters?   | No                                                          | Yes                                                            |
+| Subdomains      | Different origins (e.g., `sub.example.com` ≠ `example.com`) | Can share cookies if `Domain` is set to parent                 |
+| Scheme matters? | Yes (`http` ≠ `https`)                                      | No (cookies can be sent over both unless `Secure` flag is set) |
+| Main Purpose    | Protect DOM, storage, and network requests                  | Control which cookies are sent with requests                   |

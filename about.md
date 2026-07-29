@@ -17,10 +17,9 @@ There is also a GitHub Action to format code which can be dispatched manually. G
 
 A CI check is enabled which runs Prettier and fails if Prettier detects any formatting errors.
 
-
 run locally:
-> bundle exec jekyll serve
 
+> bundle exec jekyll serve
 
 ## License
 
